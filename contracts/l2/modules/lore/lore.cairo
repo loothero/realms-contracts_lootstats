@@ -30,9 +30,9 @@ struct ScrollPOI:
     member asset_id: Uint256 # For L1 <-> L2 compatibility 
 end
 
-struct ScrollTag:
-    member tag_id: felt # Scroll POI Kind from pois list
-    member tag_value: felt
+struct Scrollprop:
+    member prop_id: felt # Scroll POI Kind from pois list
+    member prop_value: felt
 end
 
 # struct ScrollQueryResult:
@@ -42,7 +42,7 @@ end
 #     member ContentLinkPart2: felt
 
 #     member POIs: ScrollPOI*
-#     member Tags: ScrollTag* 
+#     member props: Scrollprop* 
 # end
 
 ##########################
@@ -89,18 +89,18 @@ func scroll_pois_counter(scroll_id: felt) -> (value: felt):
 end
 
 ##########################
-## Tags (for Eras, etc.)
+## props (for Eras, etc.)
 ##########################
 @storage_var
-func whitelisted_tags(id: felt) -> (is_whitelisted: felt):
+func whitelisted_props(id: felt) -> (is_whitelisted: felt):
 end
 
 @storage_var
-func scrolls_to_tags(scroll_id: felt, tag_index: felt) -> (tag: ScrollTag):
+func scrolls_to_props(scroll_id: felt, prop_index: felt) -> (prop: Scrollprop):
 end
 
 @storage_var
-func scroll_tags_counter(scroll_id: felt) -> (value: felt):
+func scroll_props_counter(scroll_id: felt) -> (value: felt):
 end
 
 ##########################
@@ -150,8 +150,8 @@ func create_scroll{
         scroll_content: ScrollContent,
         scroll_pois_len: felt,
         scroll_pois: ScrollPOI*,
-        scroll_tags_len: felt,
-        scroll_tags: ScrollTag*
+        scroll_props_len: felt,
+        scroll_props: Scrollprop*
     ) -> (scroll_id: felt):
     alloc_locals
 
@@ -182,9 +182,9 @@ func create_scroll{
     save_pois_loop(new_scroll_id, 0, scroll_pois_len, scroll_pois)
     scroll_pois_counter.write(new_scroll_id, scroll_pois_len)
 
-    # Save Scroll's Tags
-    save_tags_loop(new_scroll_id, 0, scroll_tags_len, scroll_tags)
-    scroll_tags_counter.write(new_scroll_id, scroll_tags_len)
+    # Save Scroll's props
+    save_props_loop(new_scroll_id, 0, scroll_props_len, scroll_props)
+    scroll_props_counter.write(new_scroll_id, scroll_props_len)
 
     return (new_scroll_id)
 end
@@ -219,32 +219,32 @@ func save_pois_loop{
     return ()
 end
 
-func save_tags_loop{
+func save_props_loop{
         syscall_ptr : felt*,
         pedersen_ptr : HashBuiltin*,
         range_check_ptr
     } (
         scroll_id: felt,
-        tag_index: felt,
-        scroll_tags_len: felt,
-        scroll_tags: ScrollTag*
+        prop_index: felt,
+        scroll_props_len: felt,
+        scroll_props: Scrollprop*
     ) -> ():
     alloc_locals
 
-    if scroll_tags_len == 0:
+    if scroll_props_len == 0:
         return ()
     end
 
     # Check if POI kind is in list
-    let scroll_tag = scroll_tags[tag_index]
+    let scroll_prop = scroll_props[prop_index]
 
     # Protect
-    let (is_whitelisted) = whitelisted_tags.read(scroll_tag.tag_id)
+    let (is_whitelisted) = whitelisted_props.read(scroll_prop.prop_id)
     assert is_whitelisted = 1
 
-    scrolls_to_tags.write(scroll_id, tag_index, scroll_tag)
+    scrolls_to_props.write(scroll_id, prop_index, scroll_prop)
 
-    save_tags_loop(scroll_id, tag_index + 1, scroll_tags_len - 1, scroll_tags)
+    save_props_loop(scroll_id, prop_index + 1, scroll_props_len - 1, scroll_props)
 
     return ()
 end
@@ -259,8 +259,8 @@ func add_revision{
         scroll_content: ScrollContent,
         scroll_pois_len: felt,
         scroll_pois: ScrollPOI*,
-        scroll_tags_len: felt,
-        scroll_tags: ScrollTag*
+        scroll_props_len: felt,
+        scroll_props: Scrollprop*
     ) -> (revision_index: felt):
     alloc_locals
 
@@ -338,42 +338,42 @@ func add_whitelisted_pois_loop{
 end
 
 ##########################
-## Tags Whitelisting
+## props Whitelisting
 ##########################
 @external
-func add_whitelisted_tags{
+func add_whitelisted_props{
         syscall_ptr : felt*,
         pedersen_ptr : HashBuiltin*,
         range_check_ptr
     } (
-        tag_ids_len: felt,
-        tag_ids: felt*
+        prop_ids_len: felt,
+        prop_ids: felt*
     ) -> ():
     Ownable_only_owner()
 
-    add_whitelisted_tags_loop(tag_ids_len, tag_ids)
+    add_whitelisted_props_loop(prop_ids_len, prop_ids)
 
     return ()
 end
 
-func add_whitelisted_tags_loop{
+func add_whitelisted_props_loop{
         syscall_ptr : felt*,
         pedersen_ptr : HashBuiltin*,
         range_check_ptr
     } (
-        tag_ids_len: felt,
-        tag_ids: felt*
+        prop_ids_len: felt,
+        prop_ids: felt*
     ) -> ():
 
-    if tag_ids_len == 0:
+    if prop_ids_len == 0:
         return ()
     end
 
-    let id = [tag_ids]
+    let id = [prop_ids]
 
-    whitelisted_tags.write(id, 1)
+    whitelisted_props.write(id, 1)
 
-    add_whitelisted_pois_loop(tag_ids_len - 1, tag_ids + 1)
+    add_whitelisted_pois_loop(prop_ids_len - 1, prop_ids + 1)
 
     return ()
 end
@@ -405,7 +405,7 @@ func get_scroll{
     } (
         scroll_id: felt,
         revision_id: felt
-    ) -> (owner: felt, content: ScrollContent, pois_len: felt, pois: ScrollPOI*, tags_len: felt, tags: ScrollTag*):
+    ) -> (owner: felt, content: ScrollContent, pois_len: felt, pois: ScrollPOI*, props_len: felt, props: Scrollprop*):
     alloc_locals
 
     # local scroll: ScrollQueryResult = ScrollQueryResult()
@@ -423,15 +423,15 @@ func get_scroll{
     let (pois: ScrollPOI*) = alloc()
     get_scroll_pois_loop(scroll_id, 0, pois_count, pois)
 
-    # Get Tags
-    let (tags_count) = scroll_tags_counter.read(scroll_id)
-    let (tags: ScrollTag*) = alloc()
-    get_scroll_tags_loop(scroll_id, 0, tags_count, tags)
+    # Get props
+    let (props_count) = scroll_props_counter.read(scroll_id)
+    let (props: Scrollprop*) = alloc()
+    get_scroll_props_loop(scroll_id, 0, props_count, props)
 
     # scroll.ContentLinkPart1 = scroll_content.ContentLinkPart1
     # scroll.ContentLinkPart2 = scroll_content.ContentLinkPart2
     
-    return (scroll_owner, scroll_content, pois_count, pois, tags_count, tags)
+    return (scroll_owner, scroll_content, pois_count, pois, props_count, props)
 end
 
 func get_scroll_pois_loop{
@@ -458,26 +458,26 @@ func get_scroll_pois_loop{
     return ()
 end
 
-func get_scroll_tags_loop{
+func get_scroll_props_loop{
         syscall_ptr : felt*,
         pedersen_ptr : HashBuiltin*,
         range_check_ptr
     } (
         scroll_id: felt,
-        tag_index: felt,
-        tags_count: felt,
-        tags: ScrollTag*
+        prop_index: felt,
+        props_count: felt,
+        props: Scrollprop*
     ) -> ():
     alloc_locals
 
-    if tags_count == 0:
+    if props_count == 0:
         return ()
     end
 
-    let (tag) = scrolls_to_tags.read(scroll_id, tag_index)
-    assert tags[tag_index] = tag # Strange way of assigning values to array
+    let (prop) = scrolls_to_props.read(scroll_id, prop_index)
+    assert props[prop_index] = prop # Strange way of assigning values to array
 
-    get_scroll_tags_loop(scroll_id, tag_index + 1, tags_count - 1, tags)
+    get_scroll_props_loop(scroll_id, prop_index + 1, props_count - 1, props)
 
     return ()
 end
