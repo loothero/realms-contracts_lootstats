@@ -18,6 +18,11 @@ from contracts.Ownable_base import (
     Ownable_only_owner
 )
 
+# Events
+@event
+func scroll_created(id: felt):
+end
+
 # Supports Arweave
 # Arweave uses 43 characters
 struct ScrollContent:
@@ -162,8 +167,10 @@ func create_scroll{
     # Get controller
 
     # Get next index + update index counter per token_id
-    let (new_scroll_id) = scroll_ids.read()
-    scroll_ids.write(new_scroll_id + 1)
+    # Start with 1 instead of 0
+    let (last_id) = scroll_ids.read()
+    local new_scroll_id = last_id + 1
+    scroll_ids.write(new_scroll_id)
 
     # Write the owner
     let (caller) = get_caller_address()
@@ -185,6 +192,9 @@ func create_scroll{
     # Save Scroll's props
     save_props_loop(new_scroll_id, 0, scroll_props_len, scroll_props)
     scroll_props_counter.write(new_scroll_id, scroll_props_len)
+
+    # Emit the event
+    scroll_created.emit(new_scroll_id)
 
     return (new_scroll_id)
 end
@@ -263,35 +273,6 @@ func add_revision{
         scroll_props: Scrollprop*
     ) -> (revision_index: felt):
     alloc_locals
-
-    # let (scroll_owner) = 
-
-    # # Check that it's the person who calls is actually an owner that will be written
-    # let (caller) = get_caller_address()
-    # assert scroll.Owner = caller
-
-    # # Checking for at least two (Arweave)
-    # assert_not_zero(scroll.LinkPart1)
-    # assert_not_zero(scroll.LinkPart2)
-
-    # # Get controller
-    # # let (module_controller_addr) = module_controller_address.read()
-
-    # # Get next index + update index counter per token_id
-    # let (new_scroll_id) = scroll_ids.read()
-    # scroll_ids.write(new_scroll_id + 1)
-
-    # # Check $LORDS amount for adding scrolls?
-    # # let (lords_amount) = lords_amount_for_creating.read()
-    # # let (caller_lords_amount) = IERC20.balanceOf(caller)
-    # # assert_le(lords_amount, caller_lords_amount)  
-    
-    # # Save the Scroll with revision 0
-    # scrolls.write(scroll_id, 0, scroll)
-
-    # # Save Scroll's POIs
-    # save_pois_loop(scroll_id, 0, scroll_pois_len, scroll_pois)
-    # scroll_pois_counter.write(scroll_id, scroll_pois_len)
 
     return (0)
 end
@@ -386,12 +367,8 @@ func get_scroll_last_id{
     } (
     ) -> (res: felt):
     let (last_id) = scroll_ids.read()
-
-    if last_id == 0:
-        return (0)
-    end
     
-    return (last_id - 1)
+    return (last_id)
 end
 
 ##########################
@@ -408,12 +385,9 @@ func get_scroll{
     ) -> (owner: felt, content: ScrollContent, pois_len: felt, pois: ScrollPOI*, props_len: felt, props: Scrollprop*):
     alloc_locals
 
-    # local scroll: ScrollQueryResult = ScrollQueryResult()
-
     # Get owner
     let (scroll_owner) = scroll_owners.read(scroll_id)
     assert_not_zero(scroll_owner)
-    # scroll.Owner = current_scroll.Owner
 
     # Get Content
     let (scroll_content) = scroll_contents.read(scroll_id, revision_id)
@@ -427,9 +401,6 @@ func get_scroll{
     let (props_count) = scroll_props_counter.read(scroll_id)
     let (props: Scrollprop*) = alloc()
     get_scroll_props_loop(scroll_id, 0, props_count, props)
-
-    # scroll.ContentLinkPart1 = scroll_content.ContentLinkPart1
-    # scroll.ContentLinkPart2 = scroll_content.ContentLinkPart2
     
     return (scroll_owner, scroll_content, pois_count, pois, props_count, props)
 end
