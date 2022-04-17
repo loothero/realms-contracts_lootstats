@@ -8,7 +8,9 @@
 %lang starknet
 
 from starkware.cairo.common.cairo_builtins import HashBuiltin, SignatureBuiltin, BitwiseBuiltin
-from starkware.cairo.common.bitwise import bitwise_and
+from starkware.cairo.common.bitwise import (
+    bitwise_and,
+    bitwise_or)
 from starkware.cairo.common.pow import pow
 from starkware.cairo.common.math import (
     assert_nn_le,
@@ -20,11 +22,11 @@ func set_bit{
     syscall_ptr : felt*, bitwise_ptr : BitwiseBuiltin*, range_check_ptr
 }(size : felt, map_len : felt, map : felt*, position : felt) -> (map_len : felt, map : felt*):
     alloc_locals
-    let (local quotient, remainder) = unsigned_div_rem(size*size, 251)
+    let (local quotient, remainder) = unsigned_div_rem(size*size, 251)  # Grab quotient (to figure out which felt we should bitshift) and remainder (to figure out which bit we should mask)
     assert_nn_le(position, 251 + (quotient * 251))    # Make sure the position fits inside our array(s)
-    let (mask) = pow(2, position)
-    let (masked) = bitwise_and(map[quotient], mask)
-    map[quotient] = masked
+    let (mask) = pow(2, position)  
+    let (masked) = bitwise_or(map[quotient], mask)    # Or the 
+    assert[map + quotient] = masked
 
     return(map_len, map)
 end
