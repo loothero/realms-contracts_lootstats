@@ -23,11 +23,12 @@ async def test_set_bit():
         source=CONTRACT_FILE,
     )
    
+    position = 5
     # Single Felt Length: Set a valid bit (within 1-250)
-    layout = await contract.set_bit(size=5, map=[0], position=215).call()
+    layout = await contract.set_bit(size=5, map=[0], position=position).call()
     # Expected value: an array containing a single felt that has a single bit set at 2^215.
     # x = 0x00
-    expected = 0 | (1 << (251 - 215))
+    expected = 0 | (1 << (position))
     assert layout.result == ([expected],)
 
     # Multi-Felt Length: Set a valid bit (within 252-502 for a 2-length array)
