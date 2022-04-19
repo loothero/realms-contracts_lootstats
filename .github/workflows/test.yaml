@@ -13,8 +13,8 @@ jobs:
     steps:
       - uses: actions/checkout@v2
       - name: install extra python dependencies
-        run: pip3 install 'pytest-xdist[psutil]' dill
+        run: pip3 install -U 'pytest-xdist[psutil]' dill cairo-lang==0.8.1 cairo-nile==0.5.2
       - name: compile
-        run: bin/compile
+        run: scripts/compile
       - name: test
-        run: bin/test
+        run: scripts/test
