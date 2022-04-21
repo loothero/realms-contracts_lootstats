@@ -24,14 +24,25 @@ async def test_set_bit():
     )
    
     position = 5
+    size = 5
     # Single Felt Length: Set a valid bit (within 1-250)
-    layout = await contract.set_bit(size=5, map=[0], position=position).call()
+    layout = await contract.set_bit(size=size, map=[0], position=position).call()
     # Expected value: an array containing a single felt that has a single bit set at 2^215.
     # x = 0x00
     expected = 0 | (1 << (position))
     assert layout.result == ([expected],)
 
+    # Multi-Felt Length: Set a valid bit (within 1-252 for a 2-length array)
+    position = 5
+    size = 20
+    layout = await contract.set_bit(size=size, map=[0,5], position=position).call()
+
+    expected = 0 | (1 << (position))
+
+    assert layout.result == ([expected, 0],)
+
     # Multi-Felt Length: Set a valid bit (within 252-502 for a 2-length array)
+    # position = 
     # Multi-Felt Length: Set an invalid bit (outside 252-502 for a 2-length array)
 
 @pytest.mark.asyncio
