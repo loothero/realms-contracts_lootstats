@@ -28,17 +28,13 @@ func get_bit{
     alloc_locals
 
     # Determine which felt in the array we should read from
-    let (local quotient, _) = unsigned_div_rem(size*size, 251)  # Grab quotient (to figure out which felt we should bitshift) and remainder (to figure out which bit we should mask)
-    assert_nn_le(position, 251 + (quotient * 251))    # Make sure the position fits inside our array(s)
+    let (idx, remainder) = calc_index(size, position)
 
-    # Figure out which felt in the array we need to read from
-    let (idx, remainder) = unsigned_div_rem(position, 251)
-
-    #     # Create a mask to apply a bitwise AND
+    # Create a mask to apply a bitwise AND
     let (local mask) = pow(2, remainder)
     let (local value) = bitwise_and(map[idx], mask)    # Or the two so we write a '1' at the mask index
     
-    let (local is_set) = is_le(value, 1)
+    let (local is_set) = is_le(1, value)
 
     return(is_set)
 end
@@ -51,12 +47,7 @@ end
 #     alloc_locals
     
 #     # Determine which felt in the array we should modify
-#     let (local quotient, _) = unsigned_div_rem(size*size, 251)  # Grab quotient (to figure out which felt we should bitshift) and remainder (to figure out which bit we should mask)
-
-#     assert_nn_le(position, 251 + (quotient * 251))    # Make sure the position fits inside our array(s)
-
-#     # Figure out which felt in the array we need to modify
-#     let (idx, remainder) = unsigned_div_rem(position, 251)
+#     let (idx, remainder) = calc_index(size, position)
 
 #     # Create a mask to apply a bitwise OR
 #     let (local mask) = pow(2, remainder)
@@ -82,7 +73,7 @@ end
 #         # Check if there are felts above the one we want to modify and copy them over
 #         let (index_not_at_end) = is_le(idx, map_len)
 #         if index_not_at_end == 1:
-#             memcpy(layout+idx, map+idx, quotient-idx)
+#             memcpy(layout+idx, map+idx, map_len)
 #             tempvar range_check_ptr = range_check_ptr
 #         end
 
@@ -100,3 +91,20 @@ func calc_size{
     let (quotient, _) = unsigned_div_rem(size*size, 251) # Figure out how many felts (251 bits) we need as one bit is one map tile
     return(quotient+1)
 end
+
+# Calculates the felt that needs to be modified in the array
+@external   
+func calc_index{
+    syscall_ptr : felt*, range_check_ptr
+}(size : felt, position : felt) -> (index : felt, remainder : felt):
+    let (quotient, _) = unsigned_div_rem(size*size, 251) # Figure out how many felts (251 bits) we need as one bit is one map tile
+    
+    # Determine which felt in the array we should read from
+    assert_nn_le(position, 251 + (quotient * 251))    # Make sure the position fits inside our array(s)
+
+    # Figure out which felt in the array we need to read from
+    let (index, remainder) = unsigned_div_rem(position, 251)
+
+    return(index, remainder)
+end
+

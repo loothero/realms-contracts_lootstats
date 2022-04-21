@@ -24,7 +24,7 @@ async def test_get_bit():
     )
    
     ## Single Felt Length: Get a valid bit (within 1-250) from an empty location
-    position = 5
+    position = 0
     size = 5
 
     layout = 0 | (1 << (5))
@@ -33,10 +33,36 @@ async def test_get_bit():
 
     # Expected value: 0.
     expected = 0
+
+
+    ## Single Felt Length: Get a valid bit (within 1-250) from a 'set' location
+    position = 5
+    size = 5
+
+    layout = 0 | (1 << (5))
+
+    value = await contract.get_bit(size=size, map=[layout], position=position).call()
+
+    # Expected value: 0.
+    expected = 1
+
     
     assert value.result == (expected,)
 
 
+    ## Multi-felt length: Get a valid bit (within 1-250) from a 'set' location
+    position = 5
+    size = 25
+
+    layout = 0 | (1 << (5))
+
+    value = await contract.get_bit(size=size, map=[layout], position=position).call()
+
+    # Expected value: 0.
+    expected = 1
+
+    
+    assert value.result == (expected,)
 
 """
 @pytest.mark.asyncio
