@@ -38,10 +38,6 @@ func set_bit{
     let (local mask) = pow(2, remainder)
     let (local masked) = bitwise_or(map[idx], mask)    # Or the two so we write a '1' at the mask index
 
-    # let (tmp) = alloc()
-    # assert tmp[0] = masked
-    # return(1, tmp)
-
     # # Create a new array (because modifying existing ones causes an assert error)
     let (layout) = alloc()
     
@@ -49,7 +45,6 @@ func set_bit{
         # If array is only 1 felt long, just replace it.
         assert layout[0] = masked
     else:
-        # assert layout[0] = masked
         # Replace the felt in question
         assert layout[idx] = masked
 
@@ -57,13 +52,16 @@ func set_bit{
         let (index_not_at_start) = is_le(1, idx)
         if index_not_at_start == 1:
             memcpy(layout, map, idx)
+            tempvar range_check_ptr = range_check_ptr
         end
 
         # Check if there are felts above the one we want to modify and copy them over
-        # let (index_not_at_end) = is_le(idx, map_len)
-        # if index_not_at_end == 1:
-        #     memcpy(layout+idx, map+idx, quotient-idx)
-        # end
+        let (index_not_at_end) = is_le(idx, map_len)
+        if index_not_at_end == 1:
+            memcpy(layout+idx, map+idx, quotient-idx)
+            tempvar range_check_ptr = range_check_ptr
+        end
+    
     end 
 
     return(map_len, layout)
