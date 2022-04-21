@@ -33,7 +33,7 @@ async def test_set_bit():
     assert layout.result == ([expected],)
 
     # Multi-Felt Length: Set a valid bit (within 1-252 for a 2-length array)
-    position = 5
+    position = 260
     size = 20
     layout = await contract.set_bit(size=size, map=[0,5], position=position).call()
 
