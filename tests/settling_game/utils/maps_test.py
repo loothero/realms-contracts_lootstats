@@ -15,6 +15,31 @@ CONTRACT_FILE = os.path.join(
     os.path.dirname(__file__), "../../../", "contracts/settling_game/utils/maps.cairo")
 
 @pytest.mark.asyncio
+async def test_get_bit():
+    starknet = await Starknet.empty()
+
+    # Deploy the utils contract.
+    contract = await starknet.deploy(
+        source=CONTRACT_FILE,
+    )
+   
+    ## Single Felt Length: Get a valid bit (within 1-250) from an empty location
+    position = 5
+    size = 5
+
+    layout = 0 | (1 << (5))
+
+    value = await contract.get_bit(size=size, map=[layout], position=position).call()
+
+    # Expected value: 0.
+    expected = 0
+    
+    assert value.result == (expected,)
+
+
+
+"""
+@pytest.mark.asyncio
 async def test_set_bit():
     starknet = await Starknet.empty()
 
@@ -23,26 +48,36 @@ async def test_set_bit():
         source=CONTRACT_FILE,
     )
    
+    ## Single Felt Length: Set a valid bit (within 1-250)
     position = 5
     size = 5
-    # Single Felt Length: Set a valid bit (within 1-250)
+
     layout = await contract.set_bit(size=size, map=[0], position=position).call()
     # Expected value: an array containing a single felt that has a single bit set at 2^215.
     # x = 0x00
     expected = 0 | (1 << (position))
     assert layout.result == ([expected],)
 
-    # Multi-Felt Length: Set a valid bit (within 1-252 for a 2-length array)
-    position = 260
+    ## Multi-Felt Length: Set a valid bit (within 1-252 for a 2-length array)
+    position = 150
     size = 20
+
     layout = await contract.set_bit(size=size, map=[0,5], position=position).call()
 
     expected = 0 | (1 << (position))
 
-    assert layout.result == ([expected, 0],)
+    assert layout.result == ([expected, 5],)
 
     # Multi-Felt Length: Set a valid bit (within 252-502 for a 2-length array)
-    # position = 
+    position = 260
+    size = 20
+
+    layout = await contract.set_bit(size=size, map=[0,5], position=position).call()
+
+    expected = 5 | (1 << (position))
+
+    assert layout.result == ([0, expected],)
+
     # Multi-Felt Length: Set an invalid bit (outside 252-502 for a 2-length array)
 
 @pytest.mark.asyncio
@@ -55,10 +90,22 @@ async def test_set_bit_exceptions():
             source=CONTRACT_FILE,
         )
     
-        # Single Felt Length: Set an invalid bit (outside of 1-250)
-        layout = await contract.set_bit(size=5, map=[1], position=255).call()
+        # Single Felt Length: Set an invalid bit (outside of 0-250)
+        position = 255
+        size = 5
+        layout = await contract.set_bit(size=size, map=[1], position=position).call()
         assert layout.result == ([1],)
 
+        # Multi-Felt Length: Set an invalid bit (outside 0-502 for a 2-length array)
+        position = 510
+        size = 20
+
+        layout = await contract.set_bit(size=size, map=[0,5], position=position).call()
+
+        expected = 5 | (1 << (position))
+
+        assert layout.result == ([0, expected],)
+"""
 @pytest.mark.asyncio
 async def test_calc_size():
     starknet = await Starknet.empty()
