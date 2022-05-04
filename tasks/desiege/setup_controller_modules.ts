@@ -22,6 +22,7 @@ const deploy = async () => {
   });
 
   console.log("setting controller to", controller.address)
+  console.log(res)
 
   console.log("Waiting for set_address_of_controller...");
   await provider.waitForTransaction(res.transaction_hash)
