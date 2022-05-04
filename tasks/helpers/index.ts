@@ -10,7 +10,7 @@ dotenvConfig({ path: resolve(__dirname, "../../.env") });
 // with an environment variable.
 export const DEPLOYMENT_PATH_BASE = process.env.DEPLOY_BASE || "./deployments/starknet";
 
-const network: any = process.env.NETWORK || "georli-alpha"
+const network: any = process.env.NETWORK || "goerli-alpha"
 export const provider = new Provider(network === "local" ? { baseUrl: "http://127.0.0.1:5000/" } : { network })
 
 export function getPathBase() {
