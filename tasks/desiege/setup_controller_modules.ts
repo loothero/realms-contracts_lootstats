@@ -1,5 +1,5 @@
 
-import { getDeployedAddressInt, getDeployment, provider, getSigner } from "../helpers";
+import { getDeployment, provider, getSigner } from "../helpers";
 
 // Re-runs will use the same files
 const deploy = async () => {
@@ -18,13 +18,13 @@ const deploy = async () => {
     entrypoint: "set_address_of_controller",
     calldata: [controller.address]
   }, undefined, {
-    maxFee: '0'
+    maxFee: 0
   });
 
   console.log("setting controller to", controller.address)
 
   console.log("Waiting for set_address_of_controller...");
-
+  await provider.waitForTransaction(res.transaction_hash)
   console.log(await provider.getTransactionStatus(res.transaction_hash))
 
   try {
@@ -35,6 +35,7 @@ const deploy = async () => {
     }, undefined, {
       maxFee: '0'
     });
+    console.log(batchRes)
     console.log("Waiting for batch_set_controller_addresses...");
 
     await provider.waitForTransaction(batchRes.transaction_hash);
