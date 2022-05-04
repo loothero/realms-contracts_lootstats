@@ -5,7 +5,7 @@ async function main() {
   const contractName = 'DesiegeModuleController'
 
   // Collect params
-  const arbiter = getDeployedAddressInt("Arbiter");
+  const arbiter = getDeployedAddressInt("DesiegeArbiter");
 
   // Magically deploy + write all files and stuff 
   await deployContract(contractName, contractName, [arbiter])
