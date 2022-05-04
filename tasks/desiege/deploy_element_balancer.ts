@@ -33,6 +33,8 @@ const deploy = async () => {
             contractAddress: elementsTokenAddress,
             entrypoint: "transferOwnership",
             calldata: [elementBalancer]
+        }, undefined, {
+            maxFee: 0
         }
     )
 
@@ -51,6 +53,8 @@ const deploy = async () => {
             elementBalancer,
             "4"
         ]
+    }, undefined, {
+        maxFee: 0
     })
     console.log("appoint_contract_as_module", appointRes);
     await provider.waitForTransaction(appointRes.transaction_hash);

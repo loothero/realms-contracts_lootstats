@@ -30,6 +30,8 @@ const deploy = async () => {
             contractAddress: arbiterAddress,
             entrypoint: "appoint_contract_as_module",
             calldata: [divineEclipse, moduleId]
+        }, undefined, {
+            maxFee: 0
         }
     )
 
@@ -45,6 +47,8 @@ const deploy = async () => {
             contractAddress: arbiterAddress,
             entrypoint: "approve_module_to_module_write_access",
             calldata: ['4', moduleId]
+        }, undefined, {
+            maxFee: 0
         }
     )
 
