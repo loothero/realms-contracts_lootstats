@@ -159,7 +159,7 @@ export function getSigner() {
       throw new Error("Attempted to call getSigner() with STARKNET_PRIVATE_KEY being undefined. Set env value in .env or execution environment.")
     }
  
-    const kp = ec.getKeyPair( encode.addHexPrefix(privKey))
+    const kp = ec.getKeyPair(privKey)
     const s = new Account(provider, accountAddress, kp)
     console.log(s)
     return s;
