@@ -105,8 +105,11 @@ celerybeat.pid
 *.sage.py
 
 # Environments
+# Ignore all .env prefixes
 .env
-.env.nile
+.env.*
+# except for sample
+!.env.sample
 .venv
 env/
 venv/
