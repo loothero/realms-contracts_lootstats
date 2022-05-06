@@ -11,6 +11,11 @@ dotenvConfig({ path: resolve(__dirname, "../../.env") });
 export const DEPLOYMENT_PATH_BASE = process.env.DEPLOY_BASE || "./deployments/starknet";
 
 const network: any = process.env.NETWORK || "goerli-alpha"
+const supportedNetworks = ['mainnet-alpha','goerli-alpha', 'local'];
+if(!supportedNetworks.includes(network)){
+  throw new Error(`Invalid NETWORK provided. Use one of: ${supportedNetworks.toString()}`)
+}
+
 export const provider = new Provider(network === "local" ? { baseUrl: "http://127.0.0.1:5000/" } : { network })
 
 export function getPathBase() {
