@@ -1,3 +1,4 @@
+
 # Declare this file as a StarkNet contract and set the required
 # builtins.
 %lang starknet
@@ -11,9 +12,7 @@ from starkware.cairo.common.math import assert_not_zero, assert_le
 from starkware.cairo.common.math_cmp import (is_not_zero)
 from starkware.cairo.common.uint256 import (Uint256, uint256_le)
 
-from contracts.token.IERC20 import IERC20
-
-from contracts.Ownable_base import (
+from openzeppelin.access.ownable import (
     Ownable_initializer,
     Ownable_only_owner
 )
@@ -30,25 +29,19 @@ end
 ##########################
 # Supports Arweave
 # Arweave uses 43 characters
-struct EntityContent:
-    member ContentLinkPart1: felt
-    member ContentLinkPart2: felt
+struct EntityContentLink:
+    member Part1: felt
+    member Part2: felt
 end
 
 struct EntityPOI:
-    member poi_id: felt # Entity POI Kind from pois list
+    member id: felt # Entity POI Kind from pois list
     member asset_id: Uint256 # For L1 <-> L2 compatibility 
 end
 
-# struct EntityRevisionPOI:
-#     member poi_id: felt # Entity POI Kind from pois list
-#     member asset_id: Uint256 # For L1 <-> L2 compatibility
-#     member add_or_remove: felt # 0 for adding and 1 for removing from previous revision 
-# end
-
 struct EntityProp:
-    member prop_id: felt # Entity POI Kind from pois list
-    member prop_value: felt
+    member id: felt # Entity POI Kind from pois list
+    member value: felt
 end
 
 struct WhitelistElem:
@@ -84,11 +77,11 @@ end
 ##########################
 # Counter for sequential IDs
 @storage_var
-func entity_ids() -> (value: felt):
+func last_entity_id() -> (last_entity_id: felt):
 end
 
 @storage_var
-func entity_contents(id: felt, revision_id: felt) -> (value: EntityContent):
+func entity_content_links(id: felt, revision_id: felt) -> (value: EntityContentLink):
 end
 
 @storage_var
@@ -99,22 +92,12 @@ end
 func last_entity_revision(entity_id: felt) -> (value: felt):
 end
 
-struct EntityRevisionPOI:
-    member poi_id: felt
-    member asset_id: Uint256
-    member add_or_remove: felt # 0 for adding, 1 for removing
-end
-
-@storage_var
-func entity_revision_pois(entity_id: felt, revision_id: felt) -> (revision_poi: EntityRevisionPOI):
-end
-
 ##########################
 ## Kinds
 ##########################
 # Arbitrary
 # 0 - scroll
-# 1 - drawing
+# 1 - drawing/canvas
 # 2 - song
 # 3 - etc.
 @storage_var
@@ -139,7 +122,7 @@ end
 
 # starts with 0
 @storage_var
-func entity_pois_last_indexes(entity_id: felt) -> (index: felt):
+func entity_pois_length(entity_id: felt) -> (value: felt):
 end
 
 @storage_var
@@ -158,7 +141,7 @@ func entities_to_props(entity_id: felt, prop_index: felt) -> (prop: EntityProp):
 end
 
 @storage_var
-func entity_props_last_indexes(entity_id: felt) -> (index: felt):
+func entity_props_length(entity_id: felt) -> (value: felt):
 end
 
 @storage_var
@@ -191,55 +174,51 @@ func create_entity{
         pedersen_ptr : HashBuiltin*,
         range_check_ptr
     } (
-        entity_content: EntityContent,
-        entity_kind: felt,
-        entity_pois_len: felt,
-        entity_pois: EntityPOI*,
-        entity_props_len: felt,
-        entity_props: EntityProp*
-    ) -> (entity_id: felt):
+        content_link: EntityContentLink,
+        kind: felt,
+        pois_len: felt,
+        pois: EntityPOI*,
+        props_len: felt,
+        props: EntityProp*
+    ) -> (id: felt):
     alloc_locals
 
     # Checking for at least two (Arweave)
-    assert_not_zero(entity_content.ContentLinkPart1)
-    assert_not_zero(entity_content.ContentLinkPart2)
-
-    # Get controller
+    assert_not_zero(content_link.Part1)
+    assert_not_zero(content_link.Part2)
 
     # Get next index + update index counter per token_id
-    # Start with 1 instead of 0
-    let (last_id) = entity_ids.read()
+    # Starting with 1 for user friendliness
+    let (last_id) = last_entity_id.read()
     tempvar new_entity_id = last_id + 1
-    entity_ids.write(new_entity_id)
+    last_entity_id.write(new_entity_id)
 
     # Write the owner
     let (caller) = get_caller_address()
     entity_owners.write(new_entity_id, caller)
 
     # Check $LORDS amount for adding entities?
-    # let (module_controller_addr) = module_controller_address.read()
-    # let (lords_amount) = lords_amount_for_creating.read()
-    # let (caller_lords_amount) = IERC20.balanceOf(caller)
-    # assert_le(lords_amount, caller_lords_amount)  
 
-    if entity_kind != 0:
-        let (is_kind_whitelisted) = whitelisted_kinds.read(entity_kind)
+    if kind != 0:
+        let (is_kind_whitelisted) = whitelisted_kinds.read(kind)
         assert is_kind_whitelisted = 1
-        entity_kinds.write(new_entity_id, entity_kind)
+        entity_kinds.write(new_entity_id, kind)
     end
     
     # Save the Entity with revision 1
-    entity_contents.write(new_entity_id, 1, entity_content)
+    tempvar new_revision_id = 1
+    # last_entity_revision.write(new_entity_id, new_revision_id)
+
+    # Save link
+    entity_content_links.write(new_entity_id, new_revision_id, content_link)
 
     # Save Entity's POIs
-    tempvar last_pois_index = 0
-    save_pois_loop(new_entity_id, last_pois_index, entity_pois_len, entity_pois)
-    entity_pois_last_indexes.write(new_entity_id, last_pois_index)
+    save_pois_loop(new_entity_id, 0, pois_len, pois)
+    entity_pois_length.write(new_entity_id, pois_len)
 
     # Save Entity's props
-    tempvar last_props_index = 0
-    save_props_loop(new_entity_id, last_props_index, entity_props_len, entity_props)
-    entity_props_last_indexes.write(new_entity_id, last_props_index)
+    save_props_loop(new_entity_id, 0, props_len, props)
+    entity_props_length.write(new_entity_id, props_len)
 
     # Emit the event
     entity_created.emit(new_entity_id)
@@ -254,27 +233,25 @@ func save_pois_loop{
     } (
         entity_id: felt,
         last_poi_index: felt,
-        entity_pois_len: felt,
-        entity_pois: EntityPOI*
+        pois_len: felt,
+        pois: EntityPOI*
     ) -> ():
     alloc_locals
 
-    if entity_pois_len == 0:
+    if pois_len == 0:
         return ()
     end
 
     # Check if POI kind is in list
-    let entity_poi = entity_pois[last_poi_index]
+    let poi = [pois]
 
     # Protect
-    let (is_whitelisted) = whitelisted_pois.read(entity_poi.poi_id)
+    let (is_whitelisted) = whitelisted_pois.read(poi.id)
     assert is_whitelisted = 1
 
-    entities_to_pois.write(entity_id, last_poi_index, entity_poi)
+    entities_to_pois.write(entity_id, last_poi_index, poi)
 
-    save_pois_loop(entity_id, last_poi_index + 1, entity_pois_len - 1, entity_pois)
-
-    return ()
+    return save_pois_loop(entity_id, last_poi_index + 1, pois_len - 1, pois + EntityPOI.SIZE)
 end
 
 func save_props_loop{
@@ -283,30 +260,31 @@ func save_props_loop{
         range_check_ptr
     } (
         entity_id: felt,
-        prop_index: felt,
-        entity_props_len: felt,
-        entity_props: EntityProp*
+        last_prop_index: felt,
+        props_len: felt,
+        props: EntityProp*
     ) -> ():
     alloc_locals
 
-    if entity_props_len == 0:
+    if props_len == 0:
         return ()
     end
 
     # Check if POI kind is in list
-    let entity_prop = entity_props[prop_index]
+    let prop = [props]
 
     # Protect
-    let (is_whitelisted) = whitelisted_props.read(entity_prop.prop_id)
+    let (is_whitelisted) = whitelisted_props.read(prop.id)
     assert is_whitelisted = 1
 
-    entities_to_props.write(entity_id, prop_index, entity_prop)
+    entities_to_props.write(entity_id, last_prop_index, prop)
 
-    save_props_loop(entity_id, prop_index + 1, entity_props_len - 1, entity_props)
-
-    return ()
+    return save_props_loop(entity_id, last_prop_index + 1, props_len - 1, props + EntityProp.SIZE)
 end
 
+##########################
+## Revisions
+##########################
 @external
 func add_revision{
         syscall_ptr : felt*,
@@ -314,14 +292,24 @@ func add_revision{
         range_check_ptr
     } (
         entity_id: felt,
-        entity_content: EntityContent,
-        entity_pois_len: felt,
-        entity_pois: EntityPOI*,
-        entity_props_len: felt,
-        entity_props: EntityProp*
-    ) -> (revision_index: felt):
+        content_link: EntityContentLink,
+        pois_len: felt,
+        pois: EntityPOI*,
+        props_len: felt,
+        props: EntityProp*
+    ) -> (revision_id: felt):
     alloc_locals
 
+    # Checking for at least two (Arweave)
+    assert_not_zero(content_link.Part1)
+    assert_not_zero(content_link.Part2)
+
+    # Check Owner
+    let (owner) = entity_owners.read(entity_id)
+    let (caller) = get_caller_address()
+    assert owner = caller
+
+    # TODO: write it using mapping method
     return (0)
 end
 
@@ -394,7 +382,7 @@ func whitelist_kinds_loop{
 
     whitelisted_kinds.write(elem.id, elem.is_whitelisted)
 
-    whitelist_kinds_loop(kinds_len - 1, kinds + 1)
+    whitelist_kinds_loop(kinds_len - 1, kinds + WhitelistElem.SIZE)
 
     return ()
 end
@@ -435,7 +423,7 @@ func whitelist_pois_loop{
 
     whitelisted_pois.write(elem.id, elem.is_whitelisted)
 
-    whitelist_pois_loop(pois_len - 1, pois + 1)
+    whitelist_pois_loop(pois_len - 1, pois + WhitelistElem.SIZE)
 
     return ()
 end
@@ -476,7 +464,7 @@ func whitelist_props_loop{
 
     whitelisted_props.write(elem.id, elem.is_whitelisted)
 
-    whitelist_props_loop(props_len - 1, props + 1)
+    whitelist_props_loop(props_len - 1, props + WhitelistElem.SIZE)
 
     return ()
 end
@@ -485,14 +473,14 @@ end
 ## Views for Entity
 ##########################
 @view
-func get_last_id{
+func get_last_entity_id{
         syscall_ptr : felt*,
         pedersen_ptr : HashBuiltin*,
         range_check_ptr
     } (
-    ) -> (res: felt):
-    let (last_id) = entity_ids.read()
-    
+    ) -> (last_entity_id: felt):
+    let (last_id) = last_entity_id.read()
+
     return (last_id)
 end
 
@@ -504,7 +492,7 @@ func get_entity{
     } (
         entity_id: felt,
         revision_id: felt
-    ) -> (owner: felt, content: EntityContent, kind: felt, pois_len: felt, pois: EntityPOI*, props_len: felt, props: EntityProp*):
+    ) -> (owner: felt, content: EntityContentLink, kind: felt, pois_len: felt, pois: EntityPOI*, props_len: felt, props: EntityProp*):
     alloc_locals
 
     # Get owner
@@ -512,23 +500,22 @@ func get_entity{
     assert_not_zero(entity_owner)
 
     # Get Content
-    let (entity_content) = entity_contents.read(entity_id, revision_id)
+    let (entity_content) = entity_content_links.read(entity_id, revision_id)
 
     # Get Kind
     let (entity_kind) = entity_kinds.read(entity_id)
 
     # Get POIs
-    let (entity_pois_last_index) = entity_pois_last_indexes.read(entity_id)
-    # local entity_pois_last_index = 0
+    let (entity_pois_len) = entity_pois_length.read(entity_id)
     let (pois: EntityPOI*) = alloc()
-    get_entity_pois_loop(entity_id, 0, entity_pois_last_index + 1, pois)
+    get_entity_pois_loop(entity_id, 0, entity_pois_len, pois)
 
     # Get props
-    let (entity_props_last_index) = entity_props_last_indexes.read(entity_id)
+    let (entity_props_len) = entity_props_length.read(entity_id)
     let (props: EntityProp*) = alloc()
-    get_entity_props_loop(entity_id, 0, entity_props_last_index + 1, props)
+    get_entity_props_loop(entity_id, 0, entity_props_len, props)
     
-    return (entity_owner, entity_content, entity_kind, entity_pois_last_index + 1, pois, entity_props_last_index + 1, props)
+    return (entity_owner, entity_content, entity_kind, entity_pois_len, pois, entity_props_len, props)
 end
 
 func get_entity_pois_loop{
@@ -550,9 +537,7 @@ func get_entity_pois_loop{
     let (poi) = entities_to_pois.read(entity_id, poi_index)
     assert pois[poi_index] = poi # Strange way of assigning values to array
 
-    get_entity_pois_loop(entity_id, poi_index + 1, pois_len - 1, pois)
-
-    return ()
+    return get_entity_pois_loop(entity_id, poi_index + 1, pois_len - 1, pois)
 end
 
 func get_entity_props_loop{
