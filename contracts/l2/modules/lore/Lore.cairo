@@ -10,18 +10,26 @@ from starkware.starknet.common.messages import send_message_to_l1
 from starkware.starknet.common.syscalls import (get_caller_address, get_contract_address)
 from starkware.cairo.common.math import assert_not_zero, assert_le
 from starkware.cairo.common.math_cmp import (is_not_zero)
-from starkware.cairo.common.uint256 import (Uint256, uint256_le)
+from starkware.cairo.common.uint256 import (Uint256, uint256_le, uint256_eq)
 
+from openzeppelin.utils.constants import TRUE, FALSE
 from openzeppelin.access.ownable import (
     Ownable_initializer,
     Ownable_only_owner
 )
+
+from contracts.l2.modules.lore.ILoreValidator import ILoreValidator
+from contracts.l2.modules.lore.ILoreRestrictor import ILoreRestrictor
 
 ##########################
 ## Events
 ##########################
 @event
 func entity_created(id: felt):
+end
+
+@event
+func entity_revision_created(entity_id: felt, revision_id: felt):
 end
 
 ##########################
@@ -126,7 +134,7 @@ func entity_pois_length(entity_id: felt) -> (value: felt):
 end
 
 @storage_var
-func entity_revision_pois_mapping(entity_id: felt, revision_id: felt, poi_index: felt) -> (is_removed: felt):
+func pois_to_remove_from_revision(entity_id: felt, revision_id: felt, poi_index: felt) -> (is_removed: felt):
 end
 
 ##########################
@@ -145,7 +153,7 @@ func entity_props_length(entity_id: felt) -> (value: felt):
 end
 
 @storage_var
-func entity_revision_props_mapping(entity_id: felt, revision_id: felt, poi_index: felt) -> (is_removed: felt):
+func props_to_remove_from_revision(entity_id: felt, revision_id: felt, prop_index: felt) -> (is_removed: felt):
 end
 
 ##########################
@@ -157,11 +165,9 @@ func constructor{
         pedersen_ptr : HashBuiltin*,
         range_check_ptr
     }(
-        owner: felt,
-        module_controller_addr: felt
+        owner: felt
     ):
     Ownable_initializer(owner)
-    module_controller_address.write(module_controller_addr)
     return ()
 end
 
@@ -198,16 +204,21 @@ func create_entity{
     entity_owners.write(new_entity_id, caller)
 
     # Check $LORDS amount for adding entities?
+    # let (restrictor_addr) = restrictor_address.read() 
+    # if restrictor_addr != 0:
+    #     let (ok) = ILoreRestrictor.check(restrictor_addr, caller)
+    #     assert ok = TRUE
+    # end
 
     if kind != 0:
         let (is_kind_whitelisted) = whitelisted_kinds.read(kind)
-        assert is_kind_whitelisted = 1
+        assert is_kind_whitelisted = TRUE
         entity_kinds.write(new_entity_id, kind)
     end
     
     # Save the Entity with revision 1
     tempvar new_revision_id = 1
-    # last_entity_revision.write(new_entity_id, new_revision_id)
+    last_entity_revision.write(new_entity_id, new_revision_id)
 
     # Save link
     entity_content_links.write(new_entity_id, new_revision_id, content_link)
@@ -226,6 +237,65 @@ func create_entity{
     return (new_entity_id)
 end
 
+##########################
+## Revisions
+##########################
+@external
+func add_revision{
+        syscall_ptr : felt*,
+        pedersen_ptr : HashBuiltin*,
+        range_check_ptr
+    } (
+        entity_id: felt,
+        content_link: EntityContentLink,
+        pois_len: felt,
+        pois: EntityPOI*,
+        # props_len: felt,
+        # props: EntityProp*
+    # ) -> (to_add_len: felt, to_add: EntityPOI*, to_remove_len: felt, to_remove: EntityPOI*):
+    ) -> (revision_id: felt):
+    # ) -> (len: felt, len1: felt):
+    alloc_locals
+
+    # Checking for at least two (Arweave)
+    assert_not_zero(content_link.Part1)
+    assert_not_zero(content_link.Part2)
+
+    # Check Owner
+    let (owner) = entity_owners.read(entity_id)
+    let (caller) = get_caller_address()
+    assert owner = caller
+
+    # Get new revision ID
+    let (last_revision_id) = last_entity_revision.read(entity_id)
+    tempvar new_revision_id = last_revision_id + 1
+    last_entity_revision.write(entity_id, new_revision_id)
+
+    # Write content links
+    entity_content_links.write(entity_id, new_revision_id, content_link)
+
+    # Handle new POIs
+    let (all_pois_len, all_pois) = get_all_pois(entity_id)
+
+    ## To add
+    let (pois_to_add_len, pois_to_add) = poi_diff(pois_len, pois, all_pois_len, all_pois)
+    save_pois_loop(entity_id, all_pois_len, pois_to_add_len, pois_to_add)
+    entity_pois_length.write(entity_id, all_pois_len + pois_to_add_len)
+    ## To remove
+    let (pois_to_remove_len, pois_to_remove) = poi_diff(all_pois_len, all_pois, pois_len, pois)
+    remove_pois_for_revision(entity_id, new_revision_id, all_pois_len, all_pois, pois_to_remove_len, pois_to_remove)
+
+    # Handle new Props
+    # TODO: add props logic
+
+    entity_revision_created.emit(entity_id, new_revision_id)
+
+    return (new_revision_id)
+end
+
+##########################
+## POIs helpers
+##########################
 func save_pois_loop{
         syscall_ptr : felt*,
         pedersen_ptr : HashBuiltin*,
@@ -233,27 +303,234 @@ func save_pois_loop{
     } (
         entity_id: felt,
         last_poi_index: felt,
-        pois_len: felt,
+        len: felt,
         pois: EntityPOI*
     ) -> ():
     alloc_locals
 
-    if pois_len == 0:
+    if len == 0:
         return ()
     end
 
     # Check if POI kind is in list
     let poi = [pois]
 
-    # Protect
+    # Whitelisting protection
     let (is_whitelisted) = whitelisted_pois.read(poi.id)
-    assert is_whitelisted = 1
+    assert is_whitelisted = TRUE
+
+    # Asset ID protection
+    let (ok) = validate_poi(poi)
+    assert ok = TRUE
 
     entities_to_pois.write(entity_id, last_poi_index, poi)
 
-    return save_pois_loop(entity_id, last_poi_index + 1, pois_len - 1, pois + EntityPOI.SIZE)
+    return save_pois_loop(entity_id, last_poi_index + 1, len - 1, pois + EntityPOI.SIZE)
 end
 
+func validate_poi{
+        syscall_ptr : felt*,
+        pedersen_ptr : HashBuiltin*,
+        range_check_ptr
+    } (
+        poi: EntityPOI
+    ) -> (ok: felt):
+    alloc_locals
+
+    let (validator_addr) = validator_address.read()
+
+    if validator_addr == 0:
+        return (TRUE)
+    end
+    
+    let (ok) = ILoreValidator.check_poi(validator_addr, poi.id, poi.asset_id)
+    return (ok)
+end
+
+func remove_pois_for_revision{
+        syscall_ptr : felt*,
+        pedersen_ptr : HashBuiltin*,
+        range_check_ptr
+    } (
+        entity_id: felt,
+        revision_id: felt,
+        all_pois_len: felt,
+        all_pois: EntityPOI*,
+        pois_to_remove_len: felt,
+        pois_to_remove: EntityPOI*
+    ) -> ():
+    alloc_locals
+
+    if pois_to_remove_len == 0:
+        return ()
+    end
+
+    let poi = [pois_to_remove]
+
+    let (index) = poi_find_index(poi, 0, all_pois_len, all_pois)
+
+    pois_to_remove_from_revision.write(entity_id, revision_id, index, 1)
+
+    return remove_pois_for_revision(entity_id, revision_id, all_pois_len, all_pois, pois_to_remove_len - 1, pois_to_remove + EntityPOI.SIZE)
+end
+
+func get_all_pois{
+        syscall_ptr : felt*,
+        pedersen_ptr : HashBuiltin*,
+        range_check_ptr
+    } (
+        entity_id: felt,
+    ) -> (len: felt, arr: EntityPOI*):
+    alloc_locals
+
+    let (len) = entity_pois_length.read(entity_id)
+
+    let (arr: EntityPOI*) = alloc()
+    get_all_pois_loop(entity_id, 0, len, arr)
+
+    return (len, arr)
+end
+
+func get_all_pois_loop{
+        syscall_ptr : felt*,
+        pedersen_ptr : HashBuiltin*,
+        range_check_ptr
+    } (
+        entity_id: felt,
+        index: felt,
+        arr_len: felt,
+        arr: EntityPOI*
+    ) -> ():
+    alloc_locals
+
+    if arr_len == 0:
+        return ()
+    end
+
+    let (elem) = entities_to_pois.read(entity_id, index)
+
+    assert arr[index] = elem
+
+    return get_all_pois_loop(entity_id, index + 1, arr_len - 1, arr)
+end
+
+func poi_diff{
+        syscall_ptr : felt*,
+        pedersen_ptr : HashBuiltin*,
+        range_check_ptr
+    } (
+        a_len: felt,
+        a: EntityPOI*,
+        b_len: felt,
+        b: EntityPOI*
+    ) -> (diff_len: felt, diff: EntityPOI*):
+    alloc_locals
+
+    let (diff: EntityPOI*) = alloc()
+    let (diff_len) = poi_diff_loop(a_len, a, b_len, b, 0, 0, diff)
+
+    return (diff_len, diff)
+end
+
+func poi_diff_loop{
+        syscall_ptr : felt*,
+        pedersen_ptr : HashBuiltin*,
+        range_check_ptr
+    } (
+        a_len: felt,
+        a: EntityPOI*,
+        b_len: felt,
+        b: EntityPOI*,
+        diff_index: felt,
+        diff_len: felt,
+        diff: EntityPOI*
+    ) -> (diff_len: felt):
+    alloc_locals
+
+    if a_len == 0:
+        return (diff_len)
+    end
+
+    let a_elem = [a]
+
+    let (local found) = poi_find_occurrence(a_elem, b_len, b)
+
+    if found == 0:
+        assert diff[diff_index] = a_elem
+        return poi_diff_loop(a_len - 1, a + EntityPOI.SIZE, b_len, b, diff_index + 1, diff_len + 1, diff)
+    end
+
+    return poi_diff_loop(a_len - 1, a + EntityPOI.SIZE, b_len, b, diff_index, diff_len, diff)
+end
+
+func poi_find_occurrence{
+        syscall_ptr : felt*,
+        pedersen_ptr : HashBuiltin*,
+        range_check_ptr
+    } (
+        to_find: EntityPOI,
+        arr_len: felt,
+        arr: EntityPOI*
+    ) -> (found: felt):
+    alloc_locals
+
+    if arr_len == 0:
+        return (0)
+    end
+
+    let poi = [arr]
+
+    if poi.id == to_find.id:
+        let (assets_eq) = uint256_eq(poi.asset_id, to_find.asset_id)
+        if assets_eq == TRUE:
+            tempvar range_check_ptr = range_check_ptr
+            return (1)
+        else:
+            tempvar range_check_ptr = range_check_ptr
+        end
+    else:
+        tempvar range_check_ptr = range_check_ptr
+    end
+
+    return poi_find_occurrence(to_find, arr_len - 1, arr + EntityPOI.SIZE)
+end
+
+func poi_find_index{
+        syscall_ptr : felt*,
+        pedersen_ptr : HashBuiltin*,
+        range_check_ptr
+    } (
+        to_find: EntityPOI,
+        index: felt,
+        arr_len: felt,
+        arr: EntityPOI*
+    ) -> (index: felt):
+    alloc_locals
+
+    if arr_len == 0:
+        return (0)
+    end
+
+    let poi = [arr]
+
+    if poi.id == to_find.id:
+        let (assets_eq) = uint256_eq(poi.asset_id, to_find.asset_id)
+        if assets_eq == TRUE:
+            tempvar range_check_ptr = range_check_ptr
+            return (index)
+        else:
+            tempvar range_check_ptr = range_check_ptr
+        end
+    else:
+        tempvar range_check_ptr = range_check_ptr
+    end
+
+    return poi_find_index(to_find, index + 1, arr_len - 1, arr + EntityPOI.SIZE) 
+end
+
+##########################
+## Props
+##########################
 func save_props_loop{
         syscall_ptr : felt*,
         pedersen_ptr : HashBuiltin*,
@@ -275,42 +552,11 @@ func save_props_loop{
 
     # Protect
     let (is_whitelisted) = whitelisted_props.read(prop.id)
-    assert is_whitelisted = 1
+    assert is_whitelisted = TRUE
 
     entities_to_props.write(entity_id, last_prop_index, prop)
 
     return save_props_loop(entity_id, last_prop_index + 1, props_len - 1, props + EntityProp.SIZE)
-end
-
-##########################
-## Revisions
-##########################
-@external
-func add_revision{
-        syscall_ptr : felt*,
-        pedersen_ptr : HashBuiltin*,
-        range_check_ptr
-    } (
-        entity_id: felt,
-        content_link: EntityContentLink,
-        pois_len: felt,
-        pois: EntityPOI*,
-        props_len: felt,
-        props: EntityProp*
-    ) -> (revision_id: felt):
-    alloc_locals
-
-    # Checking for at least two (Arweave)
-    assert_not_zero(content_link.Part1)
-    assert_not_zero(content_link.Part2)
-
-    # Check Owner
-    let (owner) = entity_owners.read(entity_id)
-    let (caller) = get_caller_address()
-    assert owner = caller
-
-    # TODO: write it using mapping method
-    return (0)
 end
 
 ##########################
@@ -508,14 +754,14 @@ func get_entity{
     # Get POIs
     let (entity_pois_len) = entity_pois_length.read(entity_id)
     let (pois: EntityPOI*) = alloc()
-    get_entity_pois_loop(entity_id, 0, entity_pois_len, pois)
+    let (pois_len) = get_entity_pois_loop(entity_id, revision_id, 0, entity_pois_len, 0, pois)
 
     # Get props
     let (entity_props_len) = entity_props_length.read(entity_id)
     let (props: EntityProp*) = alloc()
     get_entity_props_loop(entity_id, 0, entity_props_len, props)
     
-    return (entity_owner, entity_content, entity_kind, entity_pois_len, pois, entity_props_len, props)
+    return (entity_owner, entity_content, entity_kind, pois_len, pois, entity_props_len, props)
 end
 
 func get_entity_pois_loop{
@@ -524,20 +770,28 @@ func get_entity_pois_loop{
         range_check_ptr
     } (
         entity_id: felt,
-        poi_index: felt,
-        pois_len: felt,
+        revision_id: felt,
+        all_pois_index: felt,
+        all_pois_len: felt,
+        pois_index: felt,
         pois: EntityPOI*
-    ) -> ():
+    ) -> (index: felt):
     alloc_locals
 
-    if pois_len == 0:
-        return ()
+    if all_pois_len == 0:
+        return (pois_index)
     end
 
-    let (poi) = entities_to_pois.read(entity_id, poi_index)
-    assert pois[poi_index] = poi # Strange way of assigning values to array
+    let (poi) = entities_to_pois.read(entity_id, all_pois_index)
 
-    return get_entity_pois_loop(entity_id, poi_index + 1, pois_len - 1, pois)
+    let (removed) = pois_to_remove_from_revision.read(entity_id, revision_id, all_pois_index)
+
+    if removed == 0:
+        assert pois[pois_index] = poi
+        return get_entity_pois_loop(entity_id, revision_id, all_pois_index + 1, all_pois_len - 1, pois_index + 1, pois)
+    end
+
+    return get_entity_pois_loop(entity_id, revision_id, all_pois_index + 1, all_pois_len - 1, pois_index, pois)
 end
 
 func get_entity_props_loop{
@@ -557,7 +811,7 @@ func get_entity_props_loop{
     end
 
     let (prop) = entities_to_props.read(entity_id, prop_index)
-    assert props[prop_index] = prop # Strange way of assigning values to array
+    assert props[prop_index] = prop
 
     get_entity_props_loop(entity_id, prop_index + 1, props_len - 1, props)
 
