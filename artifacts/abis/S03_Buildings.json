@@ -78,10 +78,6 @@
             {
                 "name": "cost",
                 "type": "Cost"
-            },
-            {
-                "name": "lords",
-                "type": "Uint256"
             }
         ],
         "name": "set_building_cost",
@@ -117,10 +113,6 @@
             {
                 "name": "cost",
                 "type": "Cost"
-            },
-            {
-                "name": "lords",
-                "type": "Uint256"
             }
         ],
         "stateMutability": "view",
