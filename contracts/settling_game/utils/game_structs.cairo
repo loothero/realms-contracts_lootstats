@@ -30,19 +30,6 @@ struct RealmData:
     member order : felt  #
 end
 
-struct ResourceUpgradeValues:
-    member resource_1 : felt
-    member resource_2 : felt
-    member resource_3 : felt
-    member resource_4 : felt
-    member resource_5 : felt
-    member resource_1_values : felt
-    member resource_2_values : felt
-    member resource_3_values : felt
-    member resource_4_values : felt
-    member resource_5_values : felt
-end
-
 struct RealmBuildings:
     member Fairgrounds : felt
     member RoyalReserve : felt
@@ -53,43 +40,17 @@ struct RealmBuildings:
     member Granary : felt
     member Housing : felt
     member Amphitheater : felt
-    member Carpenter : felt
+    member ArcherTower : felt
     member School : felt
-    member Symposium : felt
-    member LogisticsOffice : felt
-    member ExplorersGuild : felt
+    member MageTower : felt
+    member TradeOffice : felt
+    member Architect : felt
     member ParadeGrounds : felt
-    member ResourceFacility : felt
+    member Barracks : felt
     member Dock : felt
     member Fishmonger : felt
     member Farms : felt
     member Hamlet : felt
-end
-
-struct RealmBuildingCostIds:
-    member resource_1 : felt
-    member resource_2 : felt
-    member resource_3 : felt
-    member resource_4 : felt
-    member resource_5 : felt
-    member resource_6 : felt
-    member resource_7 : felt
-    member resource_8 : felt
-    member resource_9 : felt
-    member resource_10 : felt
-end
-
-struct RealmBuildingCostValues:
-    member resource_1_values : felt
-    member resource_2_values : felt
-    member resource_3_values : felt
-    member resource_4_values : felt
-    member resource_5_values : felt
-    member resource_6_values : felt
-    member resource_7_values : felt
-    member resource_8_values : felt
-    member resource_9_values : felt
-    member resource_10_values : felt
 end
 
 namespace RealmBuildingsIds:
@@ -102,13 +63,13 @@ namespace RealmBuildingsIds:
     const Granary = 7
     const Housing = 8
     const Amphitheater = 9
-    const Carpenter = 10
+    const ArcherTower = 10
     const School = 11
-    const Symposium = 12
-    const LogisticsOffice = 13
-    const ExplorersGuild = 14
+    const MageTower = 12
+    const TradeOffice = 13
+    const Architect = 14
     const ParadeGrounds = 15
-    const ResourceFacility = 16
+    const Barracks = 16
     const Dock = 17
     const Fishmonger = 18
     const Farms = 19
@@ -125,31 +86,123 @@ namespace RealmBuildingLimitTraitsIds:
     const Granary = TraitsIds.City
     const Housing = TraitsIds.City
     const Amphitheater = TraitsIds.City
-    const Carpenter = TraitsIds.City
+    const ArcherTower = TraitsIds.City
     const School = TraitsIds.City
-    const Symposium = TraitsIds.City
-    const LogisticsOffice = TraitsIds.City
-    const ExplorersGuild = TraitsIds.City
+    const MageTower = TraitsIds.City
+    const TradeOffice = TraitsIds.City
+    const Architect = TraitsIds.City
     const ParadeGrounds = TraitsIds.City
-    const ResourceFacility = TraitsIds.City
+    const Barracks = TraitsIds.City
     const Dock = TraitsIds.Harbour
     const Fishmonger = TraitsIds.Harbour
     const Farms = TraitsIds.River
     const Hamlet = TraitsIds.River
 end
 
+namespace BuildingsFood:
+    const Fairgrounds = 5
+    const RoyalReserve = 5
+    const GrandMarket = 5
+    const Castle = -1
+    const Guild = -1
+    const OfficerAcademy = -1
+    const Granary = 3
+    const Housing = -1
+    const Amphitheater = -1
+    const ArcherTower = -1
+    const School = -1
+    const MageTower = -1
+    const TradeOffice = -1
+    const Architect = -1
+    const ParadeGrounds = -1
+    const Barracks = -1
+    const Dock = -1
+    const Fishmonger = 2
+    const Farms = 1
+    const Hamlet = 1
+end
+
+namespace BuildingsCulture:
+    const Fairgrounds = 5
+    const RoyalReserve = 5
+    const GrandMarket = 0
+    const Castle = 5
+    const Guild = 5
+    const OfficerAcademy = 0
+    const Granary = 0
+    const Housing = 0
+    const Amphitheater = 2
+    const ArcherTower = 0
+    const School = 3
+    const MageTower = 0
+    const TradeOffice = 1
+    const Architect = 1
+    const ParadeGrounds = 1
+    const Barracks = 0
+    const Dock = 0
+    const Fishmonger = 0
+    const Farms = 0
+    const Hamlet = 0
+end
+
+namespace BuildingsPopulation:
+    const Fairgrounds = -10
+    const RoyalReserve = -10
+    const GrandMarket = -10
+    const Castle = -10
+    const Guild = -10
+    const OfficerAcademy = -10
+    const Granary = -10
+    const Housing = 75
+    const Amphitheater = -10
+    const ArcherTower = -10
+    const School = -10
+    const MageTower = -10
+    const TradeOffice = -10
+    const Architect = -10
+    const ParadeGrounds = -10
+    const Barracks = -10
+    const Dock = -10
+    const Fishmonger = -10
+    const Farms = 10
+    const Hamlet = 35
+end
+
+namespace ArmyCap:
+    const Fairgrounds = 0
+    const RoyalReserve = 5
+    const GrandMarket = 0
+    const Castle = 5
+    const Guild = 5
+    const OfficerAcademy = 5
+    const Granary = 0
+    const Housing = 0
+    const Amphitheater = 2
+    const ArcherTower = 0
+    const School = 3
+    const MageTower = 0
+    const TradeOffice = 0
+    const Architect = 1
+    const ParadeGrounds = 2
+    const Barracks = 1
+    const Dock = 0
+    const Fishmonger = 0
+    const Farms = 0
+    const Hamlet = 0
+end
+
 namespace ModuleIds:
     const L01_Settling = 1
-    const S01_Settling = 2
-    const L02_Resources = 3
-    const S02_Resources = 4
-    const L03_Buildings = 5
-    const S03_Buildings = 6
-    const L04_Calculator = 7
-    const L05_Wonders = 8
-    const S05_Wonders = 9
-    const L06_Combat = 11
-    const S06_Combat = 12
+    # const S01_Settling = 2
+    const L02_Resources = 2
+    # const S02_Resources = 4
+    const L03_Buildings = 3
+    # const S03_Buildings = 6
+    const L04_Calculator = 4
+    const L05_Wonders = 5
+    # const S05_Wonders = 9
+    const L06_Combat = 6
+    # const S06_Combat = 12
 end
 
 namespace ExternalContractIds:
@@ -165,7 +218,7 @@ namespace ResourceIds:
     const Wood = 1
     const Stone = 2
     const Coal = 3
-    const Cooper = 4
+    const Copper = 4
     const Obsidian = 5
     const Silver = 6
     const Ironwood = 7
@@ -290,12 +343,14 @@ struct RealmCombatData:
     member last_attacked_at : felt
 end
 
-# struct holding how much resources does it cost to build a Troop
-struct TroopCost:
-    # in total, how many unique resources does a troop cost
+# struct holding how much resources does it cost to build/buy a thing
+struct Cost:
+    # the count of unique ResourceIds necessary
     member resource_count : felt
+    # how many bits are the packed members packed into
+    member bits : felt
     # packed IDs of the necessary resources
-    member token_ids : felt
+    member packed_ids : felt
     # packed amounts of each resource
-    member resource_amounts : felt
+    member packed_amounts : felt
 end

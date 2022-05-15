@@ -71,8 +71,7 @@ func constructor{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_p
     _resources_address : felt,
     _realms_address : felt,
     _treasury_address : felt,
-    _s_realms_address : felt,
-    _storage_address : felt,
+    _s_realms_address : felt
 ):
     arbiter.write(arbiter_address)
 
@@ -83,28 +82,19 @@ func constructor{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_p
     # write patterns known at deployment. E.g., 1->2, 1->3, 5->6.
 
     # settling to state
-    can_write_to.write(ModuleIds.L01_Settling, ModuleIds.S01_Settling, TRUE)
-
+    can_write_to.write(ModuleIds.L01_Settling, ModuleIds.L01_Settling, TRUE)
+    
     # settling to wonders logic
     can_write_to.write(ModuleIds.L01_Settling, ModuleIds.L05_Wonders, TRUE)
 
-    # resources logic to state
-    can_write_to.write(ModuleIds.L02_Resources, ModuleIds.S02_Resources, TRUE)
+    # # resources logic to settling state
+    can_write_to.write(ModuleIds.L02_Resources, ModuleIds.L01_Settling, TRUE)
 
-    # resources logic to settling state
-    can_write_to.write(ModuleIds.L02_Resources, ModuleIds.S01_Settling, TRUE)
+    # # resources logic to wonders state
+    can_write_to.write(ModuleIds.L02_Resources, ModuleIds.L05_Wonders, TRUE)
 
-    # resources logic to wonders state
-    can_write_to.write(ModuleIds.L02_Resources, ModuleIds.S05_Wonders, TRUE)
-
-    # resources logic to wonders state
-    can_write_to.write(ModuleIds.L01_Settling, ModuleIds.S05_Wonders, TRUE)
-
-    # buildings to state
-    can_write_to.write(ModuleIds.L03_Buildings, ModuleIds.S03_Buildings, TRUE)
-
-    # wonders logic to state
-    can_write_to.write(ModuleIds.L05_Wonders, ModuleIds.S05_Wonders, TRUE)
+    # # combat can write to resources
+    can_write_to.write(ModuleIds.L06_Combat, ModuleIds.L02_Resources, TRUE)
 
     # Lookup table for NON module contracts
     external_contract_table.write(ExternalContractIds.Lords, _lords_address)
@@ -112,7 +102,6 @@ func constructor{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_p
     external_contract_table.write(ExternalContractIds.S_Realms, _s_realms_address)
     external_contract_table.write(ExternalContractIds.Resources, _resources_address)
     external_contract_table.write(ExternalContractIds.Treasury, _treasury_address)
-    external_contract_table.write(ExternalContractIds.Storage, _storage_address)
 
     return ()
 end
@@ -164,10 +153,7 @@ func set_initial_module_addresses{
     module_03_addr : felt,
     module_04_addr : felt,
     module_05_addr : felt,
-    module_06_addr : felt,
-    module_07_addr : felt,
-    module_08_addr : felt,
-    module_09_addr : felt,
+    module_06_addr : felt
 ):
     only_arbiter()
 
@@ -175,37 +161,25 @@ func set_initial_module_addresses{
     address_of_module_id.write(ModuleIds.L01_Settling, module_01_addr)
     module_id_of_address.write(module_01_addr, ModuleIds.L01_Settling)
 
-    # # Settling State
-    address_of_module_id.write(ModuleIds.S01_Settling, module_02_addr)
-    module_id_of_address.write(module_02_addr, ModuleIds.S01_Settling)
+    # # # Resources Logic
+    address_of_module_id.write(ModuleIds.L02_Resources, module_02_addr)
+    module_id_of_address.write(module_02_addr, ModuleIds.L02_Resources)
 
-    # # Resources Logic
-    address_of_module_id.write(ModuleIds.L02_Resources, module_03_addr)
-    module_id_of_address.write(module_03_addr, ModuleIds.L02_Resources)
+    # # # Buildings Logic
+    address_of_module_id.write(ModuleIds.L03_Buildings, module_03_addr)
+    module_id_of_address.write(module_03_addr, ModuleIds.L03_Buildings)
 
-    # # Resources State
-    address_of_module_id.write(ModuleIds.S02_Resources, module_04_addr)
-    module_id_of_address.write(module_04_addr, ModuleIds.S02_Resources)
+    # # # Calculator Logic
+    address_of_module_id.write(ModuleIds.L04_Calculator, module_04_addr)
+    module_id_of_address.write(module_04_addr, ModuleIds.L04_Calculator)
 
-    # # Buildings Logic
-    address_of_module_id.write(ModuleIds.L03_Buildings, module_05_addr)
-    module_id_of_address.write(module_05_addr, ModuleIds.L03_Buildings)
+    # # # Wonders Logic
+    address_of_module_id.write(ModuleIds.L05_Wonders, module_05_addr)
+    module_id_of_address.write(module_05_addr, ModuleIds.L05_Wonders)
 
-    # # Buildings State
-    address_of_module_id.write(ModuleIds.S03_Buildings, module_06_addr)
-    module_id_of_address.write(module_06_addr, ModuleIds.S03_Buildings)
-
-    # # Calculator Logic
-    address_of_module_id.write(ModuleIds.L04_Calculator, module_07_addr)
-    module_id_of_address.write(module_07_addr, ModuleIds.L04_Calculator)
-
-    # # Wonders Logic
-    address_of_module_id.write(ModuleIds.L05_Wonders, module_08_addr)
-    module_id_of_address.write(module_08_addr, ModuleIds.L05_Wonders)
-
-    # # Wonders State
-    address_of_module_id.write(ModuleIds.S05_Wonders, module_09_addr)
-    module_id_of_address.write(module_09_addr, ModuleIds.S05_Wonders)
+    # # # Combat Logic
+    address_of_module_id.write(ModuleIds.L06_Combat, module_06_addr)
+    module_id_of_address.write(module_06_addr, ModuleIds.L06_Combat)
 
     return ()
 end
