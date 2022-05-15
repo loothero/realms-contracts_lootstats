@@ -250,8 +250,8 @@ func add_revision{
         content_link: EntityContentLink,
         pois_len: felt,
         pois: EntityPOI*,
-        # props_len: felt,
-        # props: EntityProp*
+        props_len: felt,
+        props: EntityProp*
     # ) -> (to_add_len: felt, to_add: EntityPOI*, to_remove_len: felt, to_remove: EntityPOI*):
     ) -> (revision_id: felt):
     # ) -> (len: felt, len1: felt):
@@ -277,7 +277,7 @@ func add_revision{
     # Handle new POIs
     let (all_pois_len, all_pois) = get_all_pois(entity_id)
 
-    ## To add
+    ## POIs to add
     let (pois_to_add_len, pois_to_add) = poi_diff(pois_len, pois, all_pois_len, all_pois)
     save_pois_loop(entity_id, all_pois_len, pois_to_add_len, pois_to_add)
     entity_pois_length.write(entity_id, all_pois_len + pois_to_add_len)
@@ -286,7 +286,15 @@ func add_revision{
     remove_pois_for_revision(entity_id, new_revision_id, all_pois_len, all_pois, pois_to_remove_len, pois_to_remove)
 
     # Handle new Props
-    # TODO: add props logic
+    let (all_props_len, all_props) = get_all_props(entity_id)
+
+    ## Props to add
+    let (props_to_add_len, props_to_add) = prop_diff(props_len, props, all_props_len, all_props)
+    save_props_loop(entity_id, all_props_len, props_to_add_len, props_to_add)
+    
+    ## Props to remove
+    let (props_to_remove_len, props_to_remove) = prop_diff(all_props_len, all_props, props_len, pois)
+    remove_props_for_revision(entity_id, new_revision_id, all_props_len, all_props, props_to_remove_len, props_to_remove)
 
     entity_revision_created.emit(entity_id, new_revision_id)
 
@@ -557,6 +565,158 @@ func save_props_loop{
     entities_to_props.write(entity_id, last_prop_index, prop)
 
     return save_props_loop(entity_id, last_prop_index + 1, props_len - 1, props + EntityProp.SIZE)
+end
+
+func get_all_props{
+        syscall_ptr : felt*,
+        pedersen_ptr : HashBuiltin*,
+        range_check_ptr
+    } (
+        entity_id: felt,
+    ) -> (len: felt, arr: EntityProp*):
+    alloc_locals
+
+    let (len) = entity_props_length.read(entity_id)
+
+    let (arr: EntityProp*) = alloc()
+    get_all_props_loop(entity_id, 0, len, arr)
+
+    return (len, arr)
+end
+
+func get_all_props_loop{
+        syscall_ptr : felt*,
+        pedersen_ptr : HashBuiltin*,
+        range_check_ptr
+    } (
+        entity_id: felt,
+        index: felt,
+        arr_len: felt,
+        arr: EntityProp*
+    ) -> ():
+    alloc_locals
+
+    if arr_len == 0:
+        return ()
+    end
+
+    let (elem) = entities_to_props.read(entity_id, index)
+
+    assert arr[index] = elem
+
+    return get_all_props_loop(entity_id, index + 1, arr_len - 1, arr)
+end
+
+func prop_diff{
+        syscall_ptr : felt*,
+        pedersen_ptr : HashBuiltin*,
+        range_check_ptr
+    } (
+        a_len: felt,
+        a: EntityProp*,
+        b_len: felt,
+        b: EntityProp*
+    ) -> (diff_len: felt, diff: EntityProp*):
+    alloc_locals
+
+    let (diff: EntityProp*) = alloc()
+    let (diff_len) = prop_diff_loop(a_len, a, b_len, b, 0, 0, diff)
+
+    return (diff_len, diff)
+end
+
+func prop_diff_loop{
+        syscall_ptr : felt*,
+        pedersen_ptr : HashBuiltin*,
+        range_check_ptr
+    } (
+        a_len: felt,
+        a: EntityProp*,
+        b_len: felt,
+        b: EntityProp*,
+        diff_index: felt,
+        diff_len: felt,
+        diff: EntityProp*
+    ) -> (diff_len: felt):
+    alloc_locals
+
+    if a_len == 0:
+        return (diff_len)
+    end
+
+    let a_elem = [a]
+
+    let (local found) = poi_find_occurrence(a_elem, b_len, b)
+
+    if found == 0:
+        assert diff[diff_index] = a_elem
+        return poi_diff_loop(a_len - 1, a + EntityProp.SIZE, b_len, b, diff_index + 1, diff_len + 1, diff)
+    end
+
+    return poi_diff_loop(a_len - 1, a + EntityProp.SIZE, b_len, b, diff_index, diff_len, diff)
+end
+
+func prop_find_occurrence{
+        syscall_ptr : felt*,
+        pedersen_ptr : HashBuiltin*,
+        range_check_ptr
+    } (
+        to_find: EntityProp,
+        arr_len: felt,
+        arr: EntityProp*
+    ) -> (found: felt):
+    alloc_locals
+
+    if arr_len == 0:
+        return (0)
+    end
+
+    let poi = [arr]
+
+    if poi.id == to_find.id:
+        if poi.value == to_find.value:
+            tempvar range_check_ptr = range_check_ptr
+            return (1)
+        else:
+            tempvar range_check_ptr = range_check_ptr
+        end
+    else:
+        tempvar range_check_ptr = range_check_ptr
+    end
+
+    return prop_find_occurrence(to_find, arr_len - 1, arr + EntityProp.SIZE)
+end
+
+func prop_find_index{
+        syscall_ptr : felt*,
+        pedersen_ptr : HashBuiltin*,
+        range_check_ptr
+    } (
+        to_find: EntityProp,
+        index: felt,
+        arr_len: felt,
+        arr: EntityProp*
+    ) -> (index: felt):
+    alloc_locals
+
+    if arr_len == 0:
+        return (0)
+    end
+
+    let poi = [arr]
+
+    if poi.id == to_find.id:
+        if poi.value == to_find.value:
+            tempvar range_check_ptr = range_check_ptr
+            return (index)
+        else:
+            tempvar range_check_ptr = range_check_ptr
+        end
+    else:
+        tempvar range_check_ptr = range_check_ptr
+    end
+
+    return prop_find_index(to_find, index + 1, arr_len - 1, arr + EntityProp.SIZE) 
 end
 
 ##########################
