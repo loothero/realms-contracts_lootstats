@@ -293,7 +293,7 @@ func add_revision{
     save_props_loop(entity_id, all_props_len, props_to_add_len, props_to_add)
     
     ## Props to remove
-    let (props_to_remove_len, props_to_remove) = prop_diff(all_props_len, all_props, props_len, pois)
+    let (props_to_remove_len, props_to_remove) = prop_diff(all_props_len, all_props, props_len, props)
     remove_props_for_revision(entity_id, new_revision_id, all_props_len, all_props, props_to_remove_len, props_to_remove)
 
     entity_revision_created.emit(entity_id, new_revision_id)
@@ -646,14 +646,14 @@ func prop_diff_loop{
 
     let a_elem = [a]
 
-    let (local found) = poi_find_occurrence(a_elem, b_len, b)
+    let (local found) = prop_find_occurrence(a_elem, b_len, b)
 
     if found == 0:
         assert diff[diff_index] = a_elem
-        return poi_diff_loop(a_len - 1, a + EntityProp.SIZE, b_len, b, diff_index + 1, diff_len + 1, diff)
+        return prop_diff_loop(a_len - 1, a + EntityProp.SIZE, b_len, b, diff_index + 1, diff_len + 1, diff)
     end
 
-    return poi_diff_loop(a_len - 1, a + EntityProp.SIZE, b_len, b, diff_index, diff_len, diff)
+    return prop_diff_loop(a_len - 1, a + EntityProp.SIZE, b_len, b, diff_index, diff_len, diff)
 end
 
 func prop_find_occurrence{
@@ -717,6 +717,33 @@ func prop_find_index{
     end
 
     return prop_find_index(to_find, index + 1, arr_len - 1, arr + EntityProp.SIZE) 
+end
+
+func remove_props_for_revision{
+        syscall_ptr : felt*,
+        pedersen_ptr : HashBuiltin*,
+        range_check_ptr
+    } (
+        entity_id: felt,
+        revision_id: felt,
+        all_props_len: felt,
+        all_props: EntityProp*,
+        props_to_remove_len: felt,
+        props_to_remove: EntityProp*
+    ) -> ():
+    alloc_locals
+
+    if props_to_remove_len == 0:
+        return ()
+    end
+
+    let poi = [props_to_remove]
+
+    let (index) = prop_find_index(poi, 0, all_props_len, all_props)
+
+    props_to_remove_from_revision.write(entity_id, revision_id, index, 1)
+
+    return remove_props_for_revision(entity_id, revision_id, all_props_len, all_props, props_to_remove_len - 1, props_to_remove + EntityProp.SIZE)
 end
 
 ##########################
