@@ -577,3 +577,14 @@ async def game_factory(token_factory, compiled_proxy):
         calculator_logic
     )
     
+
+
+@pytest.fixture(scope='session')
+async def lore_factory(account_factory, compiled_proxy):
+    (starknet, accounts, signers) = account_factory
+    admin_key = signers[0]
+    admin_account = accounts[0]
+
+    lore = await proxy_builder(compiled_proxy, starknet, admin_key, admin_account, "contracts/l2/modules/lore/Lore.cairo", [admin_account.contract_address])
+
+    return starknet, lore

@@ -11,6 +11,7 @@ To run a specific test:
 `$ pytest -s tests/settling_game/01_settling_test.py`
 `$ pytest -s tests/settling_game/04_calculator_test.py`
 `$ pytest -s tests/settling_game/06_combat_test.py`
+`$ pytest -s tests/lore/lore_test.py`
 
 
 ### pytest Flags

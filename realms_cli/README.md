@@ -283,6 +283,8 @@ The following scripts deploy all contracts necessary to test and play realms on 
 
 `$ nile run --network localhost realms_cli/7_upgrade.py`
 
+`$ nile run --network goerli realms_cli/deployments/deploy_lore.py`
+
 ### Tips
 
 If you want to check a tx hash, run either
