@@ -2,17 +2,19 @@ import pytest
 import asyncio
 import enum
 
-from starkware.starknet.business_logic.state import BlockInfo
+from starkware.starknet.business_logic.state.state import BlockInfo
 from starkware.starkware_utils.error_handling import StarkException
 from starkware.starknet.definitions.error_codes import StarknetErrorCode
 
-from tests.utils import str_to_felt
+from openzeppelin.tests.utils import str_to_felt
 
 LIGHT_TOKEN_ID = 1
 DARK_TOKEN_ID = 2
 
 SHIELD_ROLE = 0
 ATTACK_ROLE = 1
+
+DEFAULT_GAS_PRICE = 100
 
 element_balancer_module_id = 4
 divine_eclipse_module_id = str_to_felt('divine-eclipse')
@@ -39,12 +41,12 @@ async def game_factory(ctx_factory_desiege):
     # Then save the controller address in the Arbiter.
     # Then deploy Controller address during module deployments.
     arbiter = await ctx.starknet.deploy(
-        source="contracts/desiege/Arbiter.cairo",
+        source="contracts/desiege/DesiegeArbiter.cairo",
         constructor_calldata=[ctx.admin.contract_address])
     ctx.arbiter = arbiter
 
     controller = await ctx.starknet.deploy(
-        source="contracts/desiege/ModuleController.cairo",
+        source="contracts/desiege/DesiegeModuleController.cairo",
         constructor_calldata=[arbiter.contract_address])
     ctx.controller = controller
     await ctx.execute(
@@ -55,7 +57,7 @@ async def game_factory(ctx_factory_desiege):
     )
 
     elements_token = await ctx.starknet.deploy(
-        "contracts/token/ERC1155/ERC1155_Mintable_Ownable.cairo",
+        "contracts/desiege/tokens/ERC1155/ERC1155_Mintable_Ownable.cairo",
         constructor_calldata=[
             ctx.admin.contract_address,
         ]

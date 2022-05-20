@@ -3,8 +3,10 @@ import asyncio
 import enum
 import logging
 
-from starkware.starknet.business_logic.state import BlockInfo
+from starkware.starknet.business_logic.state.state import BlockInfo
 from starkware.starkware_utils.error_handling import StarkException
+
+DEFAULT_GAS_PRICE = 100
 
 LOGGER = logging.getLogger(__name__)
 
@@ -39,12 +41,12 @@ async def controller_factory(ctx_factory_desiege):
     # Then save the controller address in the Arbiter.
     # Then deploy Controller address during module deployments.
     arbiter = await ctx.starknet.deploy(
-        source="contracts/desiege/Arbiter.cairo",
+        source="contracts/desiege/DesiegeArbiter.cairo",
         constructor_calldata=[admin_account.contract_address])
     ctx.arbiter = arbiter
     
     controller = await ctx.starknet.deploy(
-        source="contracts/desiege/ModuleController.cairo",
+        source="contracts/desiege/DesiegeModuleController.cairo",
         constructor_calldata=[arbiter.contract_address])
     ctx.controller = controller
     
@@ -56,7 +58,7 @@ async def controller_factory(ctx_factory_desiege):
     )
 
     elements_token = await ctx.starknet.deploy(
-        "contracts/token/ERC1155/ERC1155_Mintable_Ownable.cairo",
+        "contracts/desiege/tokens/ERC1155/ERC1155_Mintable_Ownable.cairo",
         constructor_calldata=[
             admin_account.contract_address
         ]
@@ -128,7 +130,7 @@ async def test_game_creation(game_factory):
     # Set mock value for get_block_number and get_block_timestamp
     expected_block_number = 69420
 
-    starknet.state.state.block_info = BlockInfo(expected_block_number, 2343243294)
+    starknet.state.state.block_info = BlockInfo(expected_block_number, 2343243294, DEFAULT_GAS_PRICE)
 
     exec_info = await game_factory.execute(
         "admin",
@@ -197,7 +199,7 @@ async def test_game_state_expiry(game_factory):
     # Set mock value for get_block_number
     mock_block_num = 69421
 
-    starknet.state.state.block_info = BlockInfo(mock_block_num, 2343243296)
+    starknet.state.state.block_info = BlockInfo(mock_block_num, 2343243296, DEFAULT_GAS_PRICE)
 
     small_health = 500
     game_idx = 1
@@ -252,7 +254,7 @@ async def test_game_state_expiry(game_factory):
     assert exec_res.result.game_state_enum == GameStatus.Expired.value
 
     after_max_hours = mock_block_num + ((BLOCKS_PER_MINUTE * 60) * HOURS_PER_GAME) + 1
-    starknet.state.state.block_info = BlockInfo(after_max_hours, 123456789)
+    starknet.state.state.block_info = BlockInfo(after_max_hours, 123456789, DEFAULT_GAS_PRICE)
 
     # Note: This assertion also works but is meaningless because
     # game status is already expired. TODO: Create separate test
@@ -284,7 +286,7 @@ async def test_shield_and_attack_tower(game_factory):
 
 
     mock_block_num = 1
-    starknet.state.state.block_info = BlockInfo(mock_block_num, 123456789)
+    starknet.state.state.block_info = BlockInfo(mock_block_num, 123456789, DEFAULT_GAS_PRICE)
 
     await game_factory.execute(
         "admin",
@@ -370,7 +372,7 @@ async def test_shield_and_attack_tower(game_factory):
   
     # Player 1 Increases shield by 100 LIGHT
     mock_block_num = mock_block_num + 24
-    starknet.state.state.block_info = BlockInfo(mock_block_num, 123456791)
+    starknet.state.state.block_info = BlockInfo(mock_block_num, 123456791, DEFAULT_GAS_PRICE)
 
     # Test token restrictions
     # Cannot use wrong game index - token ID mismatch
@@ -473,7 +475,7 @@ async def test_shield_and_attack_tower(game_factory):
 
     # Must claim rewards after game has expired
     after_max_hours = mock_block_num + ((BLOCKS_PER_MINUTE * 60) * HOURS_PER_GAME) + 1
-    starknet.state.state.block_info = BlockInfo(after_max_hours, 123456789)
+    starknet.state.state.block_info = BlockInfo(after_max_hours, 123456789, DEFAULT_GAS_PRICE)
 
     # TODO: Test reward claiming
 
@@ -485,7 +487,7 @@ async def test_get_game_context_variables(game_factory):
     tower_defence = game_factory.tower_defence
     
     start_block_num = 1
-    starknet.state.state.block_info = BlockInfo(start_block_num, 123456789)
+    starknet.state.state.block_info = BlockInfo(start_block_num, 123456789, DEFAULT_GAS_PRICE)
 
     await game_factory.execute(
         "admin",
@@ -495,7 +497,7 @@ async def test_get_game_context_variables(game_factory):
     )
 
     curr_mock_block_num = 2
-    starknet.state.state.block_info = BlockInfo(curr_mock_block_num, 123456789)
+    starknet.state.state.block_info = BlockInfo(curr_mock_block_num, 123456789, DEFAULT_GAS_PRICE)
 
     exec_info = await tower_defence.get_game_context_variables().call()
 
@@ -513,7 +515,7 @@ async def test_game_start_restrictions(game_factory):
     tower_defence = game_factory.tower_defence
     
     start_block_num = 1
-    starknet.state.state.block_info = BlockInfo(start_block_num, 123456789)
+    starknet.state.state.block_info = BlockInfo(start_block_num, 123456789, DEFAULT_GAS_PRICE)
 
     # Only the admin can start game, not player 1
     with pytest.raises(StarkException):
