@@ -61,8 +61,8 @@ const startGame = async () => {
     // with enough health for dark to win even in early stages, but not small enough that 
     // it's too easy for dark to win.
     if(initialHealth.isZero() || initialHealth.isNeg()){
-        
-        const targetInitHealth = Math.min(10 * 100 * 100, dark.div(toBN(2)).toNumber())
+        // The lower of 300 or half of the dark minter
+        const targetInitHealth = Math.min(3 * 100 * 100, dark.div(toBN(2)).toNumber())
         initialHealth = toBN(targetInitHealth);
         console.log("Light minted more, setting initial health to ", initialHealth.toString(10))
     }
@@ -71,6 +71,8 @@ const startGame = async () => {
         contractAddress: towerDefence.address,
         entrypoint: 'create_game',
         calldata: [initialHealth]
+    }, undefined, {
+        maxFee: 0
     })
 
     await provider.waitForTransaction(res.transaction_hash)
