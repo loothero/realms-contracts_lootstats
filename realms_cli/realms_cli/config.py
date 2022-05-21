@@ -66,6 +66,10 @@ class Config:
         self.L05_WONDERS_PROXY_ADDRESS, _ = safe_load_deployment("proxy_L05_Wonders", self.nile_network)
         self.L06_COMBAT_PROXY_ADDRESS, _ = safe_load_deployment("proxy_L06_Combat", self.nile_network) 
 
+        self.LORE_ADDRESS, _ = safe_load_deployment("Lore", self.nile_network)
+        self.LORE_PROXY_ADDRESS, _ = safe_load_deployment("Lore", self.nile_network) 
+
+
         self.XOROSHIRO_ADDRESS, _ = safe_load_deployment("xoroshiro128_starstar", self.nile_network)
 
         self.RESOURCES = [
