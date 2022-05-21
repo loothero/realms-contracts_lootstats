@@ -41,12 +41,24 @@ end
 # ############ Events ################
 
 @event
-func game_started(game_idx : felt, initial_main_health : felt):
+func game_started(game_idx : felt, initial_main_health : felt, at : felt):
 end
 
 @event
 func game_action(
-    game_idx : felt, token_id : felt, token_offset : felt, amount : felt, action_type : felt
+    game_idx : felt,
+    token_id : felt,
+    token_offset : felt,
+    amount : felt,
+    boosted_amount : felt,
+    action_type : felt,
+    account : felt,
+):
+end
+
+@event
+func tower_damage_inflicted(
+    game_idx : felt, tower_index : felt, damage : felt, tower_health : felt, account : felt
 ):
 end
 
@@ -152,7 +164,7 @@ func create_game{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_p
     # Update index
     I02_TowerStorage.set_latest_game_index(tower_defence_storage, current_index)
 
-    game_started.emit(current_index, _init_main_health)
+    game_started.emit(current_index, _init_main_health, block_number)
 
     return ()
 end
@@ -202,6 +214,13 @@ func attack_tower{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_
     else:
         I02_TowerStorage.set_shield_value(tower_defence_storage, game_idx, target_element, 0)
         tempvar damage_remaining = boosted_amount - value
+
+        # Only one tower...
+        tempvar mainTowerIndex = 0
+        tower_damage_inflicted.emit(
+            game_idx, mainTowerIndex, damage_remaining, health - damage_remaining, caller
+        )
+
         let (local health_remains) = is_le_felt(damage_remaining, health - 1)
         if health_remains == 1:
             tempvar new_health = health - damage_remaining
@@ -232,7 +251,9 @@ func attack_tower{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_
         tower_defence_storage, game_idx, tokens_id, token_pool + _amount
     )
 
-    game_action.emit(game_idx, tokens_id, offset, _amount, ActionType.Attack)
+    game_action.emit(
+        game_idx, tokens_id, offset, _amount, boosted_amount, ActionType.Attack, caller
+    )
 
     let (local contract_address) = get_contract_address()
 
@@ -293,7 +314,9 @@ func increase_shield{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_che
         tower_defence_storage, game_idx, tokens_id, token_pool + _amount
     )
 
-    game_action.emit(game_idx, tokens_id, offset, _amount, ActionType.Shield)
+    game_action.emit(
+        game_idx, tokens_id, offset, _amount, boosted_amount, ActionType.Shield, caller
+    )
 
     let (local contract_address) = get_contract_address()
 

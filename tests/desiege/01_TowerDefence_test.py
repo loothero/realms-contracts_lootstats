@@ -6,6 +6,8 @@ import logging
 from starkware.starknet.business_logic.state.state import BlockInfo
 from starkware.starkware_utils.error_handling import StarkException
 
+from openzeppelin.tests.utils import assert_event_emitted
+
 DEFAULT_GAS_PRICE = 100
 
 LOGGER = logging.getLogger(__name__)
@@ -140,8 +142,12 @@ async def test_game_creation(game_factory):
     )
 
     expected_game_index = 1
-    event = exec_info.raw_events[0]
-    assert event.data == [expected_game_index, INITIAL_TOWER_HEALTH]
+    assert_event_emitted(
+        exec_info,
+        from_address=tower_defence.contract_address,
+        name="game_started",
+        data=[expected_game_index, INITIAL_TOWER_HEALTH, expected_block_number]
+    )
     
     execution_info = await tower_defence_storage.get_latest_game_index().call()
     assert execution_info.result == (expected_game_index,)
@@ -473,11 +479,35 @@ async def test_shield_and_attack_tower(game_factory):
     execution_info = await elements_token.balanceOf(tower_defence.contract_address,light_token_id).call()
     assert execution_info.result.balance == 500 * BOOST_UNIT_MULTIPLIER
 
-    # Must claim rewards after game has expired
-    after_max_hours = mock_block_num + ((BLOCKS_PER_MINUTE * 60) * HOURS_PER_GAME) + 1
-    starknet.state.state.block_info = BlockInfo(after_max_hours, 123456789, DEFAULT_GAS_PRICE)
+    # Player 2 Attacks with DARK to cause damage to health
+    attack_res = await game_factory.execute(
+        "player2",
+        tower_defence.contract_address,
+        "attack_tower",
+        [
+            game_idx,
+            dark_token_id,
+            600 * BOOST_UNIT_MULTIPLIER
+        ]
+    )
 
-    # TODO: Test reward claiming
+    execution_info = await tower_defence_storage.get_main_health(game_idx).call()
+    # Only one tower in current game
+    main_tower_index = 0
+
+    assert_event_emitted(
+        attack_res,
+        from_address=tower_defence.contract_address,
+        name="tower_damage_inflicted",
+        data=[
+            game_idx,
+            main_tower_index,
+            # Damage should be inflicted is initial health - current health
+            INITIAL_TOWER_HEALTH - execution_info.result.health,
+            execution_info.result.health,
+            player_two_account.contract_address
+        ]
+    )
 
 @pytest.mark.asyncio
 async def test_get_game_context_variables(game_factory):
