@@ -1,44 +1,50 @@
-from starkware.starknet.business_logic.state.state import BlockInfo
-from starkware.starknet.testing.starknet import Starknet, StarknetContract
-from starkware.starknet.services.api.contract_definition import ContractDefinition
-from starkware.starknet.compiler.compile import compile_starknet_files
 import pytest
 import asyncio
 import json
 from openzeppelin.tests.utils import Signer, uint, str_to_felt, from_uint, felt_to_str
 import time
-from scripts.binary_converter import map_realm
-from tests.conftest import set_block_timestamp
+from enum import IntEnum
 
 signer = Signer(123456789987654321)
 
-# @pytest.mark.asyncio
-# async def test_create_entity():
-
+# ACCOUNTS
+NUM_SIGNING_ACCOUNTS = 2
 
 @pytest.mark.asyncio
-async def test_create_entity():
+@pytest.mark.parametrize('account_factory', [dict(num_signers=NUM_SIGNING_ACCOUNTS)], indirect=True)
+async def test_lore(account_factory, lore_factory):
+    (starknet, accounts, signers) = account_factory
+    (_, lore) = lore_factory
+
+    # print(lore)
+    # print(accounts[0])
+
+    first_account = accounts[0]
+
+    # assert 1 == 0
+
+    # return
     # Create a new Starknet class that simulates the StarkNet
     # system.
-    starknet = await Starknet.empty()
+    # # starknet = await Starknet.empty()
 
-    first_account = await starknet.deploy(
-        source="openzeppelin/account/Account.cairo",
-        constructor_calldata=[signer.public_key]
-    )
+    # first_account = await starknet.deploy(
+    #     source="openzeppelin/account/Account.cairo",
+    #     constructor_calldata=[signer.public_key]
+    # )
 
     # Deploy the contract.
-    contract = await starknet.deploy(
-      source="contracts/l2/modules/lore/lore.cairo",
-      constructor_calldata=[
-        first_account.contract_address,
-        # 0
-      ]
-    )
+    # contract = await starknet.deploy(
+    #   source="contracts/l2/modules/lore/Lore.cairo",
+    #   constructor_calldata=[
+    #     first_account.contract_address,
+    #     # 0
+    #   ]
+    # )
 
     res = await signer.send_transaction(
       account=first_account,
-      to=contract.contract_address,
+      to=lore.contract_address,
       selector_name="whitelist_kinds",
       calldata=[
         2,
@@ -49,7 +55,7 @@ async def test_create_entity():
 
     res = await signer.send_transaction(
       account=first_account,
-      to=contract.contract_address,
+      to=lore.contract_address,
       selector_name="whitelist_pois",
       calldata=[
         4,
@@ -62,7 +68,7 @@ async def test_create_entity():
 
     res = await signer.send_transaction(
       account=first_account,
-      to=contract.contract_address,
+      to=lore.contract_address,
       selector_name="whitelist_props",
       calldata=[
         2,
@@ -73,7 +79,7 @@ async def test_create_entity():
 
     await signer.send_transaction(
       account=first_account,
-      to=contract.contract_address,
+      to=lore.contract_address,
       selector_name="create_entity",
       calldata=[
         101, 102, # content link parts
@@ -89,7 +95,7 @@ async def test_create_entity():
 
     res = await signer.send_transaction(
       account=first_account,
-      to=contract.contract_address,
+      to=lore.contract_address,
       selector_name="add_revision",
       calldata=[
         1, # entity_id
@@ -97,12 +103,13 @@ async def test_create_entity():
         2, # pois count
         1, 2, 0, # poi #1
         3, 1, 0, # poi #1
+        0
       ]
     )
 
     res = await signer.send_transaction(
       account=first_account,
-      to=contract.contract_address,
+      to=lore.contract_address,
       selector_name="add_revision",
       calldata=[
         1, # entity_id
@@ -110,11 +117,12 @@ async def test_create_entity():
         3, # pois count
         1, 2, 0, # poi #1
         3, 1, 0, # poi #1
-        4, 1, 0
+        4, 1, 0,
+        0
       ]
     )
 
-    res = await contract.get_entity(entity_id=1, revision_id=1).call()
+    res = await lore.get_entity(entity_id=1, revision_id=1).call()
 
     # print(res)
     # print("-======================")
@@ -134,7 +142,7 @@ async def test_create_entity():
     assert res.result.props[1].id == 2
     assert res.result.props[1].value == 1
 
-    res2 = await contract.get_entity(entity_id=1, revision_id=2).call()
+    res2 = await lore.get_entity(entity_id=1, revision_id=2).call()
 
     # print(res2)
     # print("-======================")
@@ -150,7 +158,7 @@ async def test_create_entity():
     assert res2.result.pois[1].asset_id.low == 1
     assert res2.result.pois[1].asset_id.high == 0
 
-    res3 = await contract.get_entity(entity_id=1, revision_id=3).call()
+    res3 = await lore.get_entity(entity_id=1, revision_id=3).call()
 
     # print(res3)
     # print("-======================")
