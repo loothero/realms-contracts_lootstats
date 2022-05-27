@@ -81,3 +81,7 @@ cairo-nile = "^0.5.0"
 
 "mint_resources" = "realms_cli.admin.main.mint_resources"
 "upgrade_module" = "realms_cli.admin.main.upgrade_module"
+
+"whitelist_kinds" = "realms_cli.lore.admin.main.whitelist_kinds"
+"whitelist_pois" = "realms_cli.lore.admin.main.whitelist_pois"
+"whitelist_props" = "realms_cli.lore.admin.main.whitelist_props"
