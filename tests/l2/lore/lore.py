@@ -16,31 +16,7 @@ async def test_lore(account_factory, lore_factory):
     (starknet, accounts, signers) = account_factory
     (_, lore) = lore_factory
 
-    # print(lore)
-    # print(accounts[0])
-
     first_account = accounts[0]
-
-    # assert 1 == 0
-
-    # return
-    # Create a new Starknet class that simulates the StarkNet
-    # system.
-    # # starknet = await Starknet.empty()
-
-    # first_account = await starknet.deploy(
-    #     source="openzeppelin/account/Account.cairo",
-    #     constructor_calldata=[signer.public_key]
-    # )
-
-    # Deploy the contract.
-    # contract = await starknet.deploy(
-    #   source="contracts/l2/modules/lore/Lore.cairo",
-    #   constructor_calldata=[
-    #     first_account.contract_address,
-    #     # 0
-    #   ]
-    # )
 
     res = await signer.send_transaction(
       account=first_account,
