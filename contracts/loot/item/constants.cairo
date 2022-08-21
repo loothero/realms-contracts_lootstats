@@ -104,98 +104,98 @@ namespace Material:
             const balsa = 7
             const birch = 8
         end
-        
         namespace Soft:
             const generic = 0
             const cedar = 1
             const pine = 2
             const fir = 3
             const hemlock = 4
-            const spruace = 5
+            const spruce = 5
         end
     end
 end
 
 # Weight modifiers expressed as percentage of base material
-# LH TODO: Can't use non-ints within namespace so need to figure out proper way to structure the data below
 namespace WeightModifier:
     namespace Metal:
         const ancient = 150
-        const holy = 130
-        const ornate = 110
-
+        const holy = 135
+        const ornate = 120
+    end
     namespace Cloth:
         const royal = 150
-        const divine = 130
-        const brightsilk = 110
-    
-    namespace Leather:
-        const Studded = 130
-        const Hard = 110
+        const divine = 135
+        const brightsilk = 120
+    end
+    namespace Hide:
+        const demon = 150
+        const dragon = 135
+        const studded = 120
+        const hard = 105
+    end
+end
 
-# All densities expressed in g/cm^3
-# LH TODO: Can't use non-ints within namespace so need to figure out proper way to structure the data below
+# Densities expressed in mg/cm^3
 namespace MaterialDensity:
-    
     namespace Metal:
-        const ancient = steel * WeightModifier.Metal.ancient # base steel + ancient modifier
-        const holy = steel * WeightModifier.Metal.holy # base steel + holy modifier
-        const ornate = steel * WeightModifier.Metal.ornate # base steel + ornate modifier
-        const gold = 19.3
-        const silver = 10.49
-        const bronze = 8.73
-        const platinum = 21.45
-        const titanium = 4.5
-        const steel = 7.9
+        const gold = 19300
+        const silver = 10490
+        const bronze = 8730
+        const platinum = 21450
+        const titanium = 4500
+        const steel = 7900
+        const ancient = cast((steel * (WeightModifier.Metal.ancient / 100)), int) # steel * ancient modifier
+        const holy = cast((steel * (WeightModifier.Metal.holy / 100)), int) # steel * holy modifier
+        const ornate = cast((steel * (WeightModifier.Metal.ornate / 100)), int) # steel * ornate modifier
     end
-
     namespace Cloth:
-        const royal = silk * WeightModifier.Cloth.divine
-        const divine = silk * WeightModifier.Cloth.divine
-        const brightsilk = silk * WeightModifier.Cloth.brightsilk
-        const silk = 1.37 # single fiber of silk
-        const wool = 1.307 # single fiber of wool
-        const linen = 1.28 # single linen (flax) fiber
+        const silk = 1370 # single fiber of silk
+        const wool = 1307 # single fiber of wool
+        const linen = 1280 # single linen (flax) fiber
+        const royal = cast((silk * (WeightModifier.Cloth.royal / 100)), int)
+        const divine = cast((silk * (WeightModifier.Cloth.divine / 100)), int)
+        const brightsilk = cast((silk * (WeightModifier.Cloth.brightsilk / 100)), int)
     end
-
     namespace Biotic:
-        const DemonHusk = Material.Biotic.Demon.hide
-        const DragonskinArmor = Material.Biotic.Dragon.skin
-        const StuddedLeatherArmor =  Material.Biotic.Animal.hide
-        const HardLeatherArmor = Material.Biotic.Animal.hide
-        const LeatherArmor = Material.Biotic.Animal.hide
+        const leather = 8600
+        const StuddedLeather = cast((leather * (WeightModifier.Hide.studded / 100)), int)
+        const HardLeather = cast((leather * (WeightModifier.Hide.hard / 100)), int)
+        namespace Demon:
+            const hide = cast((leather * (WeightModifier.Hide.demon / 100)), int)
+        end
+        namespace Dragon:
+            const skin = cast((leather * (WeightModifier.Hide.dragon / 100)), int)
+        end
     end
 
-    const Paper = 1.201
+    const Paper = 1200
     
     namespace Wood:
         namespace Hard:
-            const walnut = 0.69
-            const mahogany = 0.85
-            const maple = 0.75
-            const oak = 0.90
-            const rosewood = 0.88
-            const cherry = 0.90
-            const balsa = 0.14
-            const birch = 0.67
-            const holly = 0.64
-        
+            const walnut = 6900
+            const mahogany = 8500
+            const maple = 7500
+            const oak = 9000
+            const rosewood = 8800
+            const cherry = 9000
+            const balsa = 1400
+            const birch = 6700
+            const holly = 6400
+        end
         namespace Soft:
-            const elder = 0.49
-            const cedar = 0.58
-            const pine = 0.85
-            const fir = 0.74
-            const hemlock = 0.8
-            const spruce = 0.71
-            const yew = 0.67
+            const elder = 4900
+            const cedar = 5800
+            const pine = 8500
+            const fir = 7400
+            const hemlock = 8000
+            const spruce = 7100
+            const yew = 6700
     end
-
+end
 struct State:
     member Bagged : felt # protected in a loot bag
     member Equipped : felt # equipped on an adventurer
-    member Cooldown : felt # cooling down after use
     member Loose : felt # not in loot bag or equipped (i.e on a table at a market)
-    member generic : felt # for other states
 end
 
 struct Bag:
@@ -205,7 +205,7 @@ struct Bag:
     member XP : felt # Bag experience
     member Level : felt # Bag levle
     member Capacity : felt # Carrying capacity of the bag
-    member items : Item* # items in the bags
+    member Items : Item* # items in the bags
 end
     
 # Loot item shape. This is the on-chain metadata of each item.
@@ -637,16 +637,17 @@ namespace Ranking:
             const Grimoire = 1
             const Chronicle = 2
             const Tome = 3
-            const Book =4
+            const Book = 4
         end
+    end
     namespace Armor:
         namespace Chest:
             namespace Metal:
                 const HolyChestplate = 1
-                const OrnateChestplate =  2
-                const PlateMail =  3
-                const ChainMail =  4
-                const RingMail =  5
+                const OrnateChestplate = 2
+                const PlateMail = 3
+                const ChainMail = 4
+                const RingMail = 5
             end
             namespace Biotic:
                 const DemonHusk = 1
@@ -662,6 +663,7 @@ namespace Ranking:
                 const Robe = 4
                 const Shirt = 5
             end
+        end
         namespace Head:
             namespace Metal:
                 const AncientHelm = 1
@@ -684,6 +686,7 @@ namespace Ranking:
                 const LinenHood = 4
                 const Hood = 5
             end
+        end
         namespace Waist:
             namespace Metal:
                 const OrnateBelt = 1
@@ -706,6 +709,7 @@ namespace Ranking:
                 const LinenSash = 4
                 const Sash = 5
             end
+        end
         namespace Foot:
             namespace Metal:
                 const HolyGreaves = 1
@@ -728,6 +732,7 @@ namespace Ranking:
                 const LinenShoes = 4
                 const Shoes = 5
             end
+        end
         namespace Hand:
             namespace Metal:
                 const HolyGauntlets = 1
