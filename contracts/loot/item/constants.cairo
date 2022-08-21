@@ -6,54 +6,257 @@
 
 %lang starknet
 
+namespace Material:
+    const generic = 0
+
+    namespace Metal:
+        const generic = 0
+        const ancient = 1
+        const holy = 2
+        const ornate = 3
+        const gold = 4
+        const silver = 5
+        const bronze = 6
+        const platinum = 7
+        const titanium = 8
+        const steel = 9
+    end
+    namespace Cloth:
+        const generic = 0
+        const royal = 1
+        const divine = 2
+        const brightsilk = 3 
+        const silk = 4
+        const wool = 5
+        const linen = 6
+    end
+    namespace Biotic:
+        namespace Demon:
+            const generic = 0
+            const blood = 1
+            const bones = 2
+            const brain = 3
+            const eyes = 4
+            const hide = 5
+            const flesh = 6
+            const hair = 7
+            const heart = 8
+            const entrails = 9
+            const hands = 10
+            const feet = 11
+        end
+        namespace Dragon:
+            const generic = 0
+            const blood = 1
+            const bones = 2
+            const brain = 3
+            const eyes = 4
+            const skin = 5
+            const flesh = 6
+            const hair = 7
+            const heart = 8
+            const entrails = 9
+            const hands = 10
+            const feet = 11
+        end
+        namespace Animal:
+            const generic = 0
+            const blood = 1
+            const bones = 2
+            const brain = 3
+            const eyes = 4
+            const hide = 5
+            const flesh = 6
+            const hair = 7
+            const heart = 8
+            const entrails = 9
+            const hands = 10
+            const feet = 11
+        end
+        namespace Human:
+            const generic = 0
+            const blood = 1
+            const bones = 2
+            const brain = 3
+            const eyes = 4
+            const hide = 5
+            const flesh = 6
+            const hair = 7
+            const heart = 8
+            const entrails = 9
+            const hands = 10
+            const feet = 11
+        end
+    end
+    namespace Paper:
+        const generic = 0
+        const magical = 1
+    end
+    namespace Wood:
+        namespace Hard:
+            const generic = 0
+            const walnut = 1
+            const mahogany = 2
+            const maple = 3
+            const oak = 4
+            const rosewood = 5
+            const cherry = 6
+            const balsa = 7
+            const birch = 8
+        end
+        
+        namespace Soft:
+            const generic = 0
+            const cedar = 1
+            const pine = 2
+            const fir = 3
+            const hemlock = 4
+            const spruace = 5
+        end
+    end
+end
+
+# Weight modifiers expressed as percentage of base material
+# LH TODO: Can't use non-ints within namespace so need to figure out proper way to structure the data below
+namespace WeightModifier:
+    namespace Metal:
+        const ancient = 150
+        const holy = 130
+        const ornate = 110
+
+    namespace Cloth:
+        const royal = 150
+        const divine = 130
+        const brightsilk = 110
+    
+    namespace Leather:
+        const Studded = 130
+        const Hard = 110
+
+# All densities expressed in g/cm^3
+# LH TODO: Can't use non-ints within namespace so need to figure out proper way to structure the data below
+namespace MaterialDensity:
+    
+    namespace Metal:
+        const ancient = steel * WeightModifier.Metal.ancient # base steel + ancient modifier
+        const holy = steel * WeightModifier.Metal.holy # base steel + holy modifier
+        const ornate = steel * WeightModifier.Metal.ornate # base steel + ornate modifier
+        const gold = 19.3
+        const silver = 10.49
+        const bronze = 8.73
+        const platinum = 21.45
+        const titanium = 4.5
+        const steel = 7.9
+    end
+
+    namespace Cloth:
+        const royal = silk * WeightModifier.Cloth.divine
+        const divine = silk * WeightModifier.Cloth.divine
+        const brightsilk = silk * WeightModifier.Cloth.brightsilk
+        const silk = 1.37 # single fiber of silk
+        const wool = 1.307 # single fiber of wool
+        const linen = 1.28 # single linen (flax) fiber
+    end
+
+    namespace Biotic:
+        const DemonHusk = Material.Biotic.Demon.hide
+        const DragonskinArmor = Material.Biotic.Dragon.skin
+        const StuddedLeatherArmor =  Material.Biotic.Animal.hide
+        const HardLeatherArmor = Material.Biotic.Animal.hide
+        const LeatherArmor = Material.Biotic.Animal.hide
+    end
+
+    const Paper = 1.201
+    
+    namespace Wood:
+        namespace Hard:
+            const walnut = 0.69
+            const mahogany = 0.85
+            const maple = 0.75
+            const oak = 0.90
+            const rosewood = 0.88
+            const cherry = 0.90
+            const balsa = 0.14
+            const birch = 0.67
+            const holly = 0.64
+        
+        namespace Soft:
+            const elder = 0.49
+            const cedar = 0.58
+            const pine = 0.85
+            const fir = 0.74
+            const hemlock = 0.8
+            const spruce = 0.71
+            const yew = 0.67
+    end
+
+struct State:
+    member Bagged : felt # protected in a loot bag
+    member Equipped : felt # equipped on an adventurer
+    member Cooldown : felt # cooling down after use
+    member Loose : felt # not in loot bag or equipped (i.e on a table at a market)
+    member generic : felt # for other states
+end
+
+struct Bag:
+    member Id : felt  # item id 1 - 100
+    member Age : felt  # Timestamp of when bag was created
+    member Type : felt # Provide opportunity for bag types such as elemental
+    member XP : felt # Bag experience
+    member Level : felt # Bag levle
+    member Capacity : felt # Carrying capacity of the bag
+    member items : Item* # items in the bags
+end
+    
 # Loot item shape. This is the on-chain metadata of each item.
 struct Item:
     member Id : felt  # item id 1 - 100
-    member Class : felt  # loot item class
-    member Slot : felt  # head, chest, waist, feet, hands, neck, ring, weapon
-    member Agility : felt  # Computed Agility of the item
-    member Attack : felt  # Computed Attack of the item
-    member Armour : felt  # Computed Armour of the item
-    member Wisdom : felt  # Computed Wisdom of the item
-    member Vitality : felt  # Computed Vitality of the item
-    member Prefix : felt  # Stored value if item has a Prefix
-    member Suffix : felt  # Stored value if item has a Suffix
-    member Order : felt  # Stored value if item has a Order
-    member Bonus : felt  # Stored value if item has a Bonus
-    member Level : felt  # Stored value if item has a Level
+    member Type : felt # weapon.blade, armor.foot, jewlery.ring
+    member Material : felt # the material of the item
+    member Rank : felt # 1 is best (Divine Robe = 1, Silk Robe = 2, Linen Robe = 3, Robe = 4, Shirt = 5)
+    member Prefix_1 : felt  # First part of the name prefix (i.e Demon)
+    member Prefix_2 : felt  # Second part of the name prefix (i.e Grasp)
+    member Suffix : felt  # Stored value if item has a Suffix (i.e of Power)
+    member Greatness : felt  # Stored value if item has a Greatness
     member Age : felt  # Timestamp of when item was created
     member XP : felt  # accured XP
-    # weight
-    # material
-    # protection
-    # magic
-    #
+    member State : State # the state of the item: {bagged, equipped, cooldown, etc}
 end
 
 struct Adventurer:
-    member Class : felt
+    member Id : felt # primary key for adventurer
 
-    # computed of all items stats
-    member Agility : felt
-    member Attack : felt
-    member Armour : felt
-    member Wisdom : felt
+    # Physical
+    member Strength : felt
+    member Dexterity : felt
     member Vitality : felt
+    # Mental
+    member Intelligence : felt
+    member Wisdom : felt
+    member Charisma : felt
+
+    # Meta Physical
+    member Luck : felt
 
     # store item NFT id when equiped
-    member Neck : Item
     member Weapon : Item
-    member Ring : Item
     member Chest : Item
     member Head : Item
     member Waist : Item
     member Feet : Item
     member Hands : Item
+    member Neck : Item
+    member Ring : Item
+
+    # adventurers can carry multiple bags
+    member Bags : Bag*
 
     # other unique state
-    member Age : felt
-    member Name : felt  # mint time
-    member XP : felt
+    member Health : felt
+    member Birthdate : felt # Birthdate/Age of Adventure
+    member Name : felt  # Name of Adventurer
+    member XP : felt # 
+    member Level : felt
     member Order : felt
 end
 
@@ -85,23 +288,108 @@ struct PackedAdventurerStats:
     member p3 : felt
 end
 
-namespace Class:
-    const All = 1
-    const Mage = 2
-    const Ranger = 3
-    const Warrior = 4
-end
-
-namespace ItemClass:
-    const Pendant = Class.All
-    const Necklace = Class.All
-    const Amulet = Class.All
-    const SilverRing = Class.All
-    const BronzeRing = Class.All
-    const PlatinumRing = Class.All
-    const TitaniumRing = Class.All
-    const GoldRing = Class.All
-    # TODO: add
+namespace ItemMaterial:
+    const Pendant = Material.generic
+    const Necklace = Material.generic
+    const Amulet = Material.generic
+    const SilverRing = Material.Metal.silver
+    const BronzeRing = Material.Metal.bronze
+    const PlatinumRing = Material.Metal.platinum
+    const TitaniumRing = Material.Metal.titanium
+    const GoldRing = Material.Metal.gold
+    const GhostWand = Material.Wood.Soft.elder # dumbledoor's wand was made of elder
+    const GraveWand = Material.Wood.Soft.yew # voldemort's wand was made of yew
+    const BoneWand = Material.Wood.Hard.holly # HP's wand was made of holly
+    const Wand = Material.Wood.Hard.oak
+    const Grimoire = Material.Paper.magical
+    const Chronicle = Material.Paper.generic
+    const Tome = Material.Paper.generic
+    const Book = Material.Paper.generic
+    const DivineRobe = Material.Cloth.divine
+    const SilkRobe = Material.Cloth.silk
+    const LinenRobe = Material.Cloth.linen
+    const Robe = Material.Cloth.generic
+    const Shirt = Material.Cloth.generic
+    const Crown = Material.Cloth.royal
+    const DivineHood = Material.Cloth.divine
+    const SilkHood = Material.Cloth.silk
+    const LinenHood = Material.Cloth.linen
+    const Hood = Material.Cloth.generic
+    const BrightsilkSash = Material.Cloth.brightsilk
+    const SilkSash = Material.Cloth.silk
+    const WoolSash = Material.Cloth.wool
+    const LinenSash = Material.Cloth.linen
+    const Sash = Material.Cloth.generic
+    const DivineSlippers = Material.Cloth.divine
+    const SilkSlippers = Material.Cloth.silk
+    const WoolShoes = Material.Cloth.wool
+    const LinenShoes = Material.Cloth.linen
+    const Shoes = Material.Cloth.generic
+    const DivineGloves = Material.Cloth.divine
+    const SilkGloves = Material.Cloth.silk
+    const WoolGloves = Material.Cloth.wool
+    const LinenGloves = Material.Cloth.linen
+    const Gloves = Material.Cloth.generic
+    const Katana = Material.Metal.steel
+    const Falchion = Material.Metal.steel
+    const Scimitar = Material.Metal.steel
+    const LongSword = Material.Metal.steel
+    const ShortSword = Material.Metal.steel
+    const DemonHusk = Material.Biotic.Demon.hide
+    const DragonskinArmor = Material.Biotic.Dragon.skin
+    const StuddedLeatherArmor =  Material.Biotic.Animal.hide
+    const HardLeatherArmor = Material.Biotic.Animal.hide
+    const LeatherArmor = Material.Biotic.Animal.hide
+    const DemonCrown = Material.Biotic.Demon.bones
+    const DragonsCrown = Material.Biotic.Dragon.bones
+    const WarCap = Material.Biotic.Animal.hide
+    const LeatherCap = Material.Biotic.Animal.hide
+    const Cap = Material.Biotic.Animal.hide
+    const DemonhideBelt = Material.Biotic.Demon.hide
+    const DragonskinBelt = Material.Biotic.Dragon.skin
+    const StuddedLeatherBelt = Material.Biotic.Animal.hide
+    const HardLeatherBelt = Material.Biotic.Animal.hide
+    const LeatherBelt = Material.Biotic.Animal.hide
+    const DemonhideBoots = Material.Biotic.Demon.hide
+    const DragonskinBoots = Material.Biotic.Dragon.skin
+    const StuddedLeatherBoots = Material.Biotic.Animal.hide
+    const HardLeatherBoots = Material.Biotic.Animal.hide
+    const LeatherBoots = Material.Biotic.Animal.hide
+    const DemonsHands =Material.Biotic.Demon.hands
+    const DragonskinGloves = Material.Biotic.Dragon.skin
+    const StuddedLeatherGloves = Material.Biotic.Animal.hide
+    const HardLeatherGloves = Material.Biotic.Animal.hide
+    const LeatherGloves = Material.Biotic.Animal.hide
+    const Warhammer = Material.Metal.steel
+    const Quarterstaff = Material.Wood.generic
+    const Maul = Material.Metal.steel
+    const Mace = Material.Metal.steel
+    const Club = Material.Wood.oak
+    const HolyChestplate = Material.Metal.holy
+    const OrnateChestplate = Material.Metal.ornate
+    const PlateMail = Material.Metal.steel
+    const ChainMail = Material.Metal.steel
+    const RingMail = Material.Metal.steel
+    const AncientHelm = Material.Metal.ancient
+    const OrnateHelm = Material.Metal.ornate
+    const GreatHelm = Material.Metal.steel
+    const FullHelm = Material.Metal.steel
+    const Helm = Material.Metal.generic
+    const OrnateBelt = Material.Metal.ornate
+    const WarBelt = Material.Metal.generic
+    const PlatedBelt = Material.Metal.steel
+    const MeshBelt = Material.Metal.generic
+    const HeavyBelt = Material.Metal.generic
+    const HolyGreaves = Material.Metal.holy
+    const OrnateGreaves = Material.Metal.ornate
+    const Greaves = Material.Metal.steel
+    const ChainBoots = Material.Metal.steel
+    const HeavyBoots = Material.Metal.generic
+    const HolyGauntlets = Material.Metal.holy
+    const OrnateGauntlets = Material.Metal.ornate
+    const Gauntlets = Material.Metal.steel
+    const ChainGloves = Material.Metal.steel
+    const HeavyGloves = Material.Metal.generic
 end
 
 namespace Slot:
@@ -109,8 +397,8 @@ namespace Slot:
     const Chest = 2
     const Head = 3
     const Waist = 4
-    const Feet = 5
-    const Hands = 6
+    const Foot = 5
+    const Hand = 6
     const Neck = 7
     const Ring = 8
 end
@@ -124,7 +412,99 @@ namespace ItemSlot:
     const PlatinumRing = Slot.Ring
     const TitaniumRing = Slot.Ring
     const GoldRing = Slot.Ring
-    # TODO: add
+    const GhostWand = Slot.Weapon
+    const GraveWand = Slot.Weapon
+    const BoneWand = Slot.Weapon
+    const Wand = Slot.Weapon
+    const Grimoire = Slot.Weapon
+    const Chronicle = Slot.Weapon
+    const Tome = Slot.Weapon
+    const Book = Slot.Weapon
+    const DivineRobe = Slot.Chest
+    const SilkRobe = Slot.Chest
+    const LinenRobe = Slot.Chest
+    const Robe = Slot.Chest
+    const Shirt = Slot.Chest
+    const Crown = Slot.Head
+    const DivineHood = Slot.Head
+    const SilkHood = Slot.Head
+    const LinenHood = Slot.Head
+    const Hood = Slot.Head
+    const BrightsilkSash = Slot.Waist
+    const SilkSash = Slot.Waist
+    const WoolSash = Slot.Waist
+    const LinenSash = Slot.Waist
+    const Sash = Slot.Waist
+    const DivineSlippers = Slot.Foot
+    const SilkSlippers = Slot.Foot
+    const WoolShoes = Slot.Foot
+    const LinenShoes = Slot.Foot
+    const Shoes = Slot.Foot
+    const DivineGloves = Slot.Hand
+    const SilkGloves = Slot.Hand
+    const WoolGloves = Slot.Hand
+    const LinenGloves = Slot.Hand
+    const Gloves = Slot.Hand
+    const Katana = Slot.Weapon
+    const Falchion = Slot.Weapon
+    const Scimitar = Slot.Weapon
+    const LongSword = Slot.Weapon
+    const ShortSword = Slot.Weapon
+    const DemonHusk = Slot.Chest
+    const DragonskinArmor = Slot.Chest
+    const StuddedLeatherArmor = Slot.Chest
+    const HardLeatherArmor = Slot.Chest
+    const LeatherArmor = Slot.Chest
+    const DemonCrown = Slot.Head
+    const DragonsCrown = Slot.Head
+    const WarCap = Slot.Head
+    const LeatherCap = Slot.Head
+    const Cap = Slot.Head
+    const DemonhideBelt = Slot.Waist
+    const DragonskinBelt = Slot.Waist
+    const StuddedLeatherBelt = Slot.Waist
+    const HardLeatherBelt = Slot.Waist
+    const LeatherBelt = Slot.Waist
+    const DemonhideBoots = Slot.Foot
+    const DragonskinBoots = Slot.Foot
+    const StuddedLeatherBoots = Slot.Foot
+    const HardLeatherBoots = Slot.Foot
+    const LeatherBoots = Slot.Foot
+    const DemonsHands = Slot.Hand
+    const DragonskinGloves = Slot.Hand
+    const StuddedLeatherGloves = Slot.Hand
+    const HardLeatherGloves = Slot.Hand
+    const LeatherGloves = Slot.Hand
+    const Warhammer = Slot.Weapon
+    const Quarterstaff = Slot.Weapon
+    const Maul = Slot.Weapon
+    const Mace = Slot.Weapon
+    const Club = Slot.Weapon
+    const HolyChestplate = Slot.Chest
+    const OrnateChestplate = Slot.Chest
+    const PlateMail = Slot.Chest
+    const ChainMail = Slot.Chest
+    const RingMail = Slot.Chest
+    const AncientHelm = Slot.Head
+    const OrnateHelm = Slot.Head
+    const GreatHelm = Slot.Head
+    const FullHelm = Slot.Head
+    const Helm = Slot.Head
+    const OrnateBelt = Slot.Waist
+    const WarBelt = Slot.Waist
+    const PlatedBelt = Slot.Waist
+    const MeshBelt = Slot.Waist
+    const HeavyBelt = Slot.Waist
+    const HolyGreaves = Slot.Hand
+    const OrnateGreaves = Slot.Hand
+    const Greaves = Slot.Hand
+    const ChainBoots = Slot.Foot
+    const HeavyBoots = Slot.Foot
+    const HolyGauntlets = Slot.Foot
+    const OrnateGauntlets = Slot.Foot
+    const Gauntlets = Slot.Foot
+    const ChainGloves = Slot.Hand
+    const HeavyGloves = Slot.Hand
 end
 
 namespace ItemIds:
@@ -231,522 +611,159 @@ namespace ItemIds:
     const HeavyGloves = 101
 end
 
-namespace ItemAgility:
-    const Pendant = 10
-    const Necklace = 10
-    const Amulet = 10
-    const SilverRing = 10
-    const BronzeRing = 10
-    const PlatinumRing = 10
-    const TitaniumRing = 10
-    const GoldRing = 10
-    const GhostWand = 10
-    const GraveWand = 10
-    const BoneWand = 10
-    const Wand = 10
-    const Grimoire = 10
-    const Chronicle = 10
-    const Tome = 10
-    const Book = 10
-    const DivineRobe = 10
-    const SilkRobe = 10
-    const LinenRobe = 10
-    const Robe = 10
-    const Shirt = 10
-    const Crown = 10
-    const DivineHood = 10
-    const SilkHood = 10
-    const LinenHood = 10
-    const Hood = 10
-    const BrightsilkSash = 50
-    const SilkSash = 49
-    const WoolSash = 48
-    const LinenSash = 46
-    const Sash = 45
-    const DivineSlippers = 100
-    const SilkSlippers = 98
-    const WoolShoes = 96
-    const LinenShoes = 93
-    const Shoes = 90
-    const DivineGloves = 10
-    const SilkGloves = 10
-    const WoolGloves = 10
-    const LinenGloves = 10
-    const Gloves = 10
-    const Katana = 100
-    const Falchion = 98
-    const Scimitar = 96
-    const LongSword = 93
-    const ShortSword = 90
-    const DemonHusk = 100
-    const DragonskinArmor = 98
-    const StuddedLeatherArmor = 96
-    const HardLeatherArmor = 93
-    const LeatherArmor = 90
-    const DemonCrown = 50
-    const DragonsCrown = 49
-    const WarCap = 48
-    const LeatherCap = 47
-    const Cap = 45
-    const DemonhideBelt = 50
-    const DragonskinBelt = 49
-    const StuddedLeatherBelt = 48
-    const HardLeatherBelt = 47
-    const LeatherBelt = 45
-    const DemonhideBoots = 50
-    const DragonskinBoots = 49
-    const StuddedLeatherBoots = 48
-    const HardLeatherBoots = 47
-    const LeatherBoots = 45
-    const DemonsHands = 10
-    const DragonskinGloves = 10
-    const StuddedLeatherGloves = 10
-    const HardLeatherGloves = 10
-    const LeatherGloves = 10
-    const Warhammer = 10
-    const Quarterstaff = 10
-    const Maul = 10
-    const Mace = 10
-    const Club = 10
-    const HolyChestplate = 10
-    const OrnateChestplate = 10
-    const PlateMail = 10
-    const ChainMail = 10
-    const RingMail = 10
-    const AncientHelm = 10
-    const OrnateHelm = 10
-    const GreatHelm = 10
-    const FullHelm = 10
-    const Helm = 10
-    const OrnateBelt = 10
-    const WarBelt = 10
-    const PlatedBelt = 10
-    const MeshBelt = 10
-    const HeavyBelt = 10
-    const HolyGreaves = 10
-    const OrnateGreaves = 10
-    const Greaves = 10
-    const ChainBoots = 10
-    const HeavyBoots = 10
-    const HolyGauntlets = 10
-    const OrnateGauntlets = 10
-    const Gauntlets = 10
-    const ChainGloves = 10
-    const HeavyGloves = 10
-end
-
-namespace ItemArmour:
-    const Pendant = 0
-    const Necklace = 0
-    const Amulet = 0
-    const SilverRing = 0
-    const BronzeRing = 0
-    const PlatinumRing = 0
-    const TitaniumRing = 0
-    const GoldRing = 0
-    const GhostWand = 0
-    const GraveWand = 0
-    const BoneWand = 0
-    const Wand = 0
-    const Grimoire = 0
-    const Chronicle = 0
-    const Tome = 0
-    const Book = 0
-    const DivineRobe = 50
-    const SilkRobe = 49
-    const LinenRobe = 48
-    const Robe = 46
-    const Shirt = 45
-    const Crown = 50
-    const DivineHood = 49
-    const SilkHood = 48
-    const LinenHood = 46
-    const Hood = 45
-    const BrightsilkSash = 0
-    const SilkSash = 0
-    const WoolSash = 0
-    const LinenSash = 0
-    const Sash = 0
-    const DivineSlippers = 0
-    const SilkSlippers = 0
-    const WoolShoes = 0
-    const LinenShoes = 0
-    const Shoes = 0
-    const DivineGloves = 50
-    const SilkGloves = 49
-    const WoolGloves = 48
-    const LinenGloves = 46
-    const Gloves = 45
-    const Katana = 0
-    const Falchion = 0
-    const Scimitar = 0
-    const LongSword = 0
-    const ShortSword = 0
-    const DemonHusk = 50
-    const DragonskinArmor = 49
-    const StuddedLeatherArmor = 48
-    const HardLeatherArmor = 46
-    const LeatherArmor = 45
-    const DemonCrown = 50
-    const DragonsCrown = 49
-    const WarCap = 48
-    const LeatherCap = 46
-    const Cap = 45
-    const DemonhideBelt = 0
-    const DragonskinBelt = 0
-    const StuddedLeatherBelt = 0
-    const HardLeatherBelt = 0
-    const LeatherBelt = 0
-    const DemonhideBoots = 0
-    const DragonskinBoots = 0
-    const StuddedLeatherBoots = 0
-    const HardLeatherBoots = 0
-    const LeatherBoots = 0
-    const DemonsHands = 50
-    const DragonskinGloves = 49
-    const StuddedLeatherGloves = 48
-    const HardLeatherGloves = 46
-    const LeatherGloves = 45
-    const Warhammer = 0
-    const Quarterstaff = 0
-    const Maul = 0
-    const Mace = 0
-    const Club = 0
-    const HolyChestplate = 100
-    const OrnateChestplate = 98
-    const PlateMail = 96
-    const ChainMail = 93
-    const RingMail = 90
-    const AncientHelm = 50
-    const OrnateHelm = 49
-    const GreatHelm = 48
-    const FullHelm = 47
-    const Helm = 45
-    const OrnateBelt = 0
-    const WarBelt = 0
-    const PlatedBelt = 0
-    const MeshBelt = 0
-    const HeavyBelt = 0
-    const HolyGreaves = 50
-    const OrnateGreaves = 49
-    const Greaves = 48
-    const ChainBoots = 47
-    const HeavyBoots = 45
-    const HolyGauntlets = 50
-    const OrnateGauntlets = 49
-    const Gauntlets = 48
-    const ChainGloves = 46
-    const HeavyGloves = 45
-end
-
-namespace ItemVitality:
-    const Pendant = 0
-    const Necklace = 0
-    const Amulet = 0
-    const SilverRing = 0
-    const BronzeRing = 0
-    const PlatinumRing = 0
-    const TitaniumRing = 0
-    const GoldRing = 0
-    const GhostWand = 100
-    const GraveWand = 98
-    const BoneWand = 96
-    const Wand = 93
-    const Grimoire = 100
-    const Chronicle = 98
-    const Tome = 96
-    const Book = 93
-    const DivineRobe = 100
-    const SilkRobe = 98
-    const LinenRobe = 96
-    const Robe = 93
-    const Shirt = 90
-    const Crown = 0
-    const DivineHood = 0
-    const SilkHood = 0
-    const LinenHood = 0
-    const Hood = 0
-    const BrightsilkSash = 0
-    const SilkSash = 0
-    const WoolSash = 0
-    const LinenSash = 0
-    const Sash = 0
-    const DivineSlippers = 0
-    const SilkSlippers = 0
-    const WoolShoes = 0
-    const LinenShoes = 0
-    const Shoes = 0
-    const DivineGloves = 50
-    const SilkGloves = 49
-    const WoolGloves = 48
-    const LinenGloves = 47
-    const Gloves = 45
-    const Katana = 0
-    const Falchion = 0
-    const Scimitar = 0
-    const LongSword = 0
-    const ShortSword = 0
-    const DemonHusk = 0
-    const DragonskinArmor = 0
-    const StuddedLeatherArmor = 0
-    const HardLeatherArmor = 0
-    const LeatherArmor = 0
-    const DemonCrown = 0
-    const DragonsCrown = 0
-    const WarCap = 0
-    const LeatherCap = 0
-    const Cap = 0
-    const DemonhideBelt = 0
-    const DragonskinBelt = 0
-    const StuddedLeatherBelt = 0
-    const HardLeatherBelt = 0
-    const LeatherBelt = 0
-    const DemonhideBoots = 0
-    const DragonskinBoots = 0
-    const StuddedLeatherBoots = 0
-    const HardLeatherBoots = 0
-    const LeatherBoots = 0
-    const DemonsHands = 0
-    const DragonskinGloves = 0
-    const StuddedLeatherGloves = 0
-    const HardLeatherGloves = 0
-    const LeatherGloves = 0
-    const Warhammer = 0
-    const Quarterstaff = 0
-    const Maul = 0
-    const Mace = 0
-    const Club = 0
-    const HolyChestplate = 0
-    const OrnateChestplate = 0
-    const PlateMail = 0
-    const ChainMail = 0
-    const RingMail = 0
-    const AncientHelm = 0
-    const OrnateHelm = 0
-    const GreatHelm = 0
-    const FullHelm = 0
-    const Helm = 0
-    const OrnateBelt = 0
-    const WarBelt = 0
-    const PlatedBelt = 0
-    const MeshBelt = 0
-    const HeavyBelt = 0
-    const HolyGreaves = 0
-    const OrnateGreaves = 0
-    const Greaves = 0
-    const ChainBoots = 0
-    const HeavyBoots = 0
-    const HolyGauntlets = 0
-    const OrnateGauntlets = 0
-    const Gauntlets = 0
-    const ChainGloves = 0
-    const HeavyGloves = 0
-end
-
-namespace ItemWisdom:
-    const Pendant = 0
-    const Necklace = 0
-    const Amulet = 0
-    const SilverRing = 0
-    const BronzeRing = 0
-    const PlatinumRing = 0
-    const TitaniumRing = 0
-    const GoldRing = 0
-    const GhostWand = 0
-    const GraveWand = 0
-    const BoneWand = 0
-    const Wand = 0
-    const Grimoire = 0
-    const Chronicle = 0
-    const Tome = 0
-    const Book = 0
-    const DivineRobe = 50
-    const SilkRobe = 49
-    const LinenRobe = 48
-    const Robe = 47
-    const Shirt = 45
-    const Crown = 50
-    const DivineHood = 49
-    const SilkHood = 48
-    const LinenHood = 47
-    const Hood = 45
-    const BrightsilkSash = 50
-    const SilkSash = 49
-    const WoolSash = 48
-    const LinenSash = 47
-    const Sash = 45
-    const DivineSlippers = 0
-    const SilkSlippers = 0
-    const WoolShoes = 0
-    const LinenShoes = 0
-    const Shoes = 0
-    const DivineGloves = 0
-    const SilkGloves = 0
-    const WoolGloves = 0
-    const LinenGloves = 0
-    const Gloves = 0
-    const Katana = 0
-    const Falchion = 0
-    const Scimitar = 0
-    const LongSword = 0
-    const ShortSword = 0
-    const DemonHusk = 50
-    const DragonskinArmor = 49
-    const StuddedLeatherArmor = 48
-    const HardLeatherArmor = 47
-    const LeatherArmor = 45
-    const DemonCrown = 0
-    const DragonsCrown = 0
-    const WarCap = 0
-    const LeatherCap = 0
-    const Cap = 0
-    const DemonhideBelt = 0
-    const DragonskinBelt = 0
-    const StuddedLeatherBelt = 0
-    const HardLeatherBelt = 0
-    const LeatherBelt = 0
-    const DemonhideBoots = 50
-    const DragonskinBoots = 49
-    const StuddedLeatherBoots = 48
-    const HardLeatherBoots = 46
-    const LeatherBoots = 45
-    const DemonsHands = 0
-    const DragonskinGloves = 0
-    const StuddedLeatherGloves = 0
-    const HardLeatherGloves = 0
-    const LeatherGloves = 0
-    const Warhammer = 50
-    const Quarterstaff = 49
-    const Maul = 48
-    const Mace = 46
-    const Club = 45
-    const HolyChestplate = 100
-    const OrnateChestplate = 98
-    const PlateMail = 96
-    const ChainMail = 93
-    const RingMail = 90
-    const AncientHelm = 0
-    const OrnateHelm = 0
-    const GreatHelm = 0
-    const FullHelm = 0
-    const Helm = 0
-    const OrnateBelt = 50
-    const WarBelt = 49
-    const PlatedBelt = 48
-    const MeshBelt = 46
-    const HeavyBelt = 45
-    const HolyGreaves = 50
-    const OrnateGreaves = 49
-    const Greaves = 48
-    const ChainBoots = 46
-    const HeavyBoots = 45
-    const HolyGauntlets = 0
-    const OrnateGauntlets = 0
-    const Gauntlets = 0
-    const ChainGloves = 0
-    const HeavyGloves = 0
-end
-
-namespace ItemAttack:
-    const Pendant = 0
-    const Necklace = 0
-    const Amulet = 0
-    const SilverRing = 0
-    const BronzeRing = 0
-    const PlatinumRing = 0
-    const TitaniumRing = 0
-    const GoldRing = 0
-    const GhostWand = 100
-    const GraveWand = 98
-    const BoneWand = 96
-    const Wand = 93
-    const Grimoire = 90
-    const Chronicle = 0
-    const Tome = 0
-    const Book = 0
-    const DivineRobe = 0
-    const SilkRobe = 0
-    const LinenRobe = 0
-    const Robe = 0
-    const Shirt = 0
-    const Crown = 0
-    const DivineHood = 0
-    const SilkHood = 0
-    const LinenHood = 0
-    const Hood = 0
-    const BrightsilkSash = 0
-    const SilkSash = 0
-    const WoolSash = 0
-    const LinenSash = 0
-    const Sash = 0
-    const DivineSlippers = 0
-    const SilkSlippers = 0
-    const WoolShoes = 0
-    const LinenShoes = 0
-    const Shoes = 0
-    const DivineGloves = 0
-    const SilkGloves = 0
-    const WoolGloves = 0
-    const LinenGloves = 0
-    const Gloves = 0
-    const Katana = 100
-    const Falchion = 98
-    const Scimitar = 96
-    const LongSword = 93
-    const ShortSword = 90
-    const DemonHusk = 0
-    const DragonskinArmor = 0
-    const StuddedLeatherArmor = 0
-    const HardLeatherArmor = 0
-    const LeatherArmor = 0
-    const DemonCrown = 0
-    const DragonsCrown = 0
-    const WarCap = 0
-    const LeatherCap = 0
-    const Cap = 0
-    const DemonhideBelt = 50
-    const DragonskinBelt = 49
-    const StuddedLeatherBelt = 48
-    const HardLeatherBelt = 46
-    const LeatherBelt = 45
-    const DemonhideBoots = 0
-    const DragonskinBoots = 0
-    const StuddedLeatherBoots = 0
-    const HardLeatherBoots = 0
-    const LeatherBoots = 0
-    const DemonsHands = 50
-    const DragonskinGloves = 49
-    const StuddedLeatherGloves = 48
-    const HardLeatherGloves = 47
-    const LeatherGloves = 45
-    const Warhammer = 150
-    const Quarterstaff = 147
-    const Maul = 144
-    const Mace = 140
-    const Club = 135
-    const HolyChestplate = 0
-    const OrnateChestplate = 0
-    const PlateMail = 0
-    const ChainMail = 0
-    const RingMail = 0
-    const AncientHelm = 50
-    const OrnateHelm = 49
-    const GreatHelm = 48
-    const FullHelm = 46
-    const Helm = 45
-    const OrnateBelt = 50
-    const WarBelt = 49
-    const PlatedBelt = 48
-    const MeshBelt = 47
-    const HeavyBelt = 45
-    const HolyGreaves = 0
-    const OrnateGreaves = 0
-    const Greaves = 0
-    const ChainBoots = 0
-    const HeavyBoots = 0
-    const HolyGauntlets = 50
-    const OrnateGauntlets = 49
-    const Gauntlets = 48
-    const ChainGloves = 47
-    const HeavyGloves = 45
+namespace Ranking:
+    namespace Weapons:
+        namespace Bludgeon:
+            const Warhammer = 1
+            const Quarterstaff = 2
+            const Maul = 3
+            const Mace = 4
+            const Club = 5
+        end
+        namespace Blade:            
+            const Katana = 1
+            const Falchion = 2
+            const Scimitar = 3
+            const LongSword = 4
+            const ShortSword = 5
+        end
+        namespace Wand:
+            const GhostWand = 1
+            const GraveWand = 2
+            const BoneWand = 3
+            const Wand = 4
+        end
+        namespace Book:
+            const Grimoire = 1
+            const Chronicle = 2
+            const Tome = 3
+            const Book =4
+        end
+    namespace Armor:
+        namespace Chest:
+            namespace Metal:
+                const HolyChestplate = 1
+                const OrnateChestplate =  2
+                const PlateMail =  3
+                const ChainMail =  4
+                const RingMail =  5
+            end
+            namespace Biotic:
+                const DemonHusk = 1
+                const DragonskinArmor = 2
+                const StuddedLeatherArmor = 3
+                const HardLeatherArmor = 4
+                const LeatherArmor = 5
+            end
+            namespace Cloth:
+                const DivineRobe = 1
+                const SilkRobe = 2
+                const LinenRobe = 3
+                const Robe = 4
+                const Shirt = 5
+            end
+        namespace Head:
+            namespace Metal:
+                const AncientHelm = 1
+                const OrnateHelm = 2
+                const GreatHelm = 3
+                const FullHelm = 4
+                const Helm = 5
+            end
+            namespace Biotic:
+                const DemonCrown = 1
+                const DragonsCrown = 2
+                const WarCap = 3
+                const LeatherCap = 4
+                const Cap = 5
+            end
+            namespace Cloth:
+                const Crown = 1
+                const DivineHood = 2
+                const SilkHood = 3
+                const LinenHood = 4
+                const Hood = 5
+            end
+        namespace Waist:
+            namespace Metal:
+                const OrnateBelt = 1
+                const WarBelt = 2
+                const PlatedBelt = 3
+                const MeshBelt = 4
+                const HeavyBelt = 5
+            end
+            namespace Biotic:
+                const DemonhideBelt = 1
+                const DragonskinBelt = 2
+                const StuddedLeatherBelt = 3
+                const HardLeatherBelt = 4
+                const LeatherBelt = 5
+            end
+            namespace Cloth:
+                const BrightsilkSash = 1
+                const SilkSash = 2
+                const WoolSash = 3
+                const LinenSash = 4
+                const Sash = 5
+            end
+        namespace Foot:
+            namespace Metal:
+                const HolyGreaves = 1
+                const OrnateGreaves = 2
+                const Greaves = 3
+                const ChainBoots = 4
+                const HeavyBoots = 5
+            end
+            namespace Biotic:
+                const DemonhideBoots = 1
+                const DragonskinBoots = 2
+                const StuddedLeatherBoots = 3
+                const HardLeatherBoots = 4
+                const LeatherBoots = 5
+            end
+            namespace Cloth:
+                const DivineSlippers = 1
+                const SilkSlippers = 2
+                const WoolShoes = 3
+                const LinenShoes = 4
+                const Shoes = 5
+            end
+        namespace Hand:
+            namespace Metal:
+                const HolyGauntlets = 1
+                const OrnateGauntlets = 2
+                const Gauntlets = 3
+                const ChainGloves = 4
+                const HeavyGloves = 5
+            end
+            namespace Biotic:
+                const DemonsHands = 1
+                const DragonskinGloves = 2
+                const StuddedLeatherGloves = 3
+                const HardLeatherGloves = 4
+                const LeatherGloves = 5
+            end
+            namespace Cloth:
+                const DivineGloves = 1
+                const SilkGloves = 2
+                const WoolGloves = 3
+                const LinenGloves = 4
+                const Gloves = 5
+            end
+        end
+    end
+    namespace Jewlery:
+        namespace Necklace:
+            const Pendant = 1
+            const Necklace = 1
+            const Amulet = 1
+        end
+        namespace Ring:
+            const PlatinumRing = 1
+            const TitaniumRing = 1
+            const GoldRing = 1
+            const SilverRing = 2 
+            const BronzeRing = 3
+        end
+    end
 end
